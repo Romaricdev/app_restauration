@@ -213,7 +213,6 @@ export async function updateTableStatusesFromReservations(): Promise<void> {
           const table = allTables.find((t) => t.number === reservation.tableNumber)
           if (table && table.status !== 'occupied' && !table.currentOrderId) {
             await updateTableStatusByNumber(reservation.tableNumber, 'reserved')
-            console.log(`[Reservations] Table ${reservation.tableNumber} marked as reserved (15 min before)`)
           }
         } catch (error) {
           console.error(`[Reservations] Error updating table ${reservation.tableNumber}:`, error)
@@ -228,7 +227,6 @@ export async function updateTableStatusesFromReservations(): Promise<void> {
           const table = allTables.find((t) => t.number === reservation.tableNumber)
           if (table && !table.currentOrderId && table.status === 'reserved') {
             await updateTableStatusByNumber(reservation.tableNumber, 'available')
-            console.log(`[Reservations] Table ${reservation.tableNumber} released (reservation passed)`)
           }
         } catch (error) {
           console.error(`[Reservations] Error releasing table ${reservation.tableNumber}:`, error)

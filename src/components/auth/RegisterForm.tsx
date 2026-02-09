@@ -7,6 +7,7 @@ import { Input } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Mail, Lock, User, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { registerSchema, zodErrorsToFieldErrors } from '@/lib/validations/auth.schema'
 import { useAuth } from '@/hooks/useAuth'
 
 interface RegisterFormData {
@@ -62,34 +63,14 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
   }
 
   const validate = (): boolean => {
-    const newErrors: Partial<RegisterFormData> = {}
-
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Le nom complet est requis'
-    } else if (formData.fullName.trim().length < 2) {
-      newErrors.fullName = 'Le nom doit contenir au moins 2 caractères'
+    const result = registerSchema.safeParse(formData)
+    if (result.success) {
+      setErrors({})
+      return true
     }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'L\'email est requis'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Format d\'email invalide'
-    }
-
-    if (!formData.password.trim()) {
-      newErrors.password = 'Le mot de passe est requis'
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères'
-    }
-
-    if (!formData.confirmPassword.trim()) {
-      newErrors.confirmPassword = 'La confirmation est requise'
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Les mots de passe ne correspondent pas'
-    }
-
+    const newErrors = zodErrorsToFieldErrors<keyof RegisterFormData>(result)
     setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
+    return false
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

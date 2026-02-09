@@ -169,21 +169,6 @@ const CUSTOMER_PLACEHOLDER_PHONE = '—'
 
 /** Crée une commande POS en base (order + order_items + order_item_addons). */
 export async function createOrderFromPos(input: CreateOrderFromPosInput): Promise<void> {
-  console.log('[DB] createOrderFromPos - START', {
-    orderId: input.id,
-    type: input.type,
-    tableId: input.tableId,
-    tableNumber: input.tableNumber,
-    customerName: input.customerName,
-    customerPhone: input.customerPhone,
-    customerEmail: input.customerEmail,
-    validatedAt: input.validatedAt,
-    kitchenStatus: input.kitchenStatus,
-    itemsCount: input.items.length,
-    subtotal: input.subtotal,
-    total: input.total,
-  })
-
   const customerName = (input.customerName || '').trim() || CUSTOMER_PLACEHOLDER_NAME
   const customerPhone = (input.customerPhone || '').trim() || CUSTOMER_PLACEHOLDER_PHONE
   const validatedAt = input.validatedAt && input.validatedAt.length > 0
@@ -210,9 +195,7 @@ export async function createOrderFromPos(input: CreateOrderFromPosInput): Promis
     source: 'pos' as const,
   }
 
-  console.log('[DB] createOrderFromPos - Inserting orderRow:', JSON.stringify(orderRow, null, 2))
-
-  const { data: insertedData, error: orderError } = await (supabase.from('orders') as any).insert(orderRow).select()
+  const { error: orderError } = await (supabase.from('orders') as any).insert(orderRow).select()
   
   if (orderError) {
     console.error('[DB] createOrderFromPos - INSERT ERROR:', {
@@ -226,17 +209,11 @@ export async function createOrderFromPos(input: CreateOrderFromPosInput): Promis
     throw orderError
   }
 
-  console.log('[DB] createOrderFromPos - Order inserted successfully:', {
-    orderId: input.id,
-    insertedData,
-  })
-
   // Mettre à jour le current_order_id de la table si c'est une commande sur place
   if (input.tableId && input.tableNumber) {
     try {
       const { updateTableStatus } = await import('./tables')
       await updateTableStatus(input.tableId, 'occupied', input.id)
-      console.log(`[DB] createOrderFromPos - Table ${input.tableNumber} updated with current_order_id: ${input.id}`)
     } catch (error) {
       console.error(`[DB] createOrderFromPos - Error updating table ${input.tableNumber}:`, error)
       // Ne pas bloquer la création de la commande si la mise à jour de la table échoue
@@ -284,7 +261,31 @@ export async function createOrderFromPos(input: CreateOrderFromPosInput): Promis
     }
   }
 
-  console.log('[DB] createOrderFromPos - SUCCESS - Order fully created:', input.id)
+}
+
+/** Input pour créer une commande site public (panier → commande en ligne). */
+export type CreateOrderFromOnlineInput = Omit<
+  CreateOrderFromPosInput,
+  'tableId' | 'tableNumber' | 'partySize'
+> & {
+  tableId?: never
+  tableNumber?: never
+  partySize?: never
+}
+
+/** Crée une commande en ligne en base (source 'online', pas de table). */
+export async function createOrderFromOnline(input: CreateOrderFromOnlineInput): Promise<void> {
+  await createOrderFromPos({
+    ...input,
+    tableId: undefined,
+    tableNumber: undefined,
+    partySize: undefined,
+    kitchenStatus: 'pending',
+  })
+  const { error } = await (supabase.from('orders') as any)
+    .update({ source: 'online' })
+    .eq('id', input.id)
+  if (error) throw error
 }
 
 /** Met à jour le statut cuisine d'une commande. Si kitchenStatus = 'served', enregistre served_at (timer arrêté). */
@@ -362,18 +363,6 @@ export async function updateOrderPayment(
   orderId: string,
   payment: UpdateOrderPaymentInput
 ): Promise<void> {
-  console.log('[DB] updateOrderPayment - START', {
-    orderId,
-    paymentMethod: payment.paymentMethod,
-    paidAt: payment.paidAt,
-    invoiceNumber: payment.invoiceNumber,
-    customerName: payment.customerName,
-    customerPhone: payment.customerPhone,
-    customerEmail: payment.customerEmail,
-    amountReceived: payment.amountReceived,
-    changeAmount: payment.changeAmount,
-  })
-
   // Retry si la commande n'existe pas encore (création en cours de sync) ou collision invoice_number
   const maxRetries = 5
   const retryDelay = 500 // ms
@@ -381,8 +370,6 @@ export async function updateOrderPayment(
   let currentInvoiceNumber = payment.invoiceNumber
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
-    console.log(`[DB] updateOrderPayment - Attempt ${attempt + 1}/${maxRetries} for order ${orderId}`)
-
     // Vérifier si la commande existe
     const { data: existing, error: checkError } = await supabase
       .from('orders')
@@ -391,11 +378,6 @@ export async function updateOrderPayment(
       .single()
 
     if (checkError) {
-      console.log(`[DB] updateOrderPayment - Check error (attempt ${attempt + 1}):`, {
-        code: checkError.code,
-        message: checkError.message,
-        details: checkError.details,
-      })
       if (checkError.code !== 'PGRST116') {
         // PGRST116 = not found, on continue avec retry
         console.error('[DB] updateOrderPayment - Non-PGRST116 error, throwing:', checkError)
@@ -404,7 +386,6 @@ export async function updateOrderPayment(
     }
 
     if (!existing) {
-      console.log(`[DB] updateOrderPayment - Order not found (attempt ${attempt + 1}), will retry...`)
       // Commande n'existe pas encore, attendre un peu et réessayer
       if (attempt < maxRetries - 1) {
         await new Promise((resolve) => setTimeout(resolve, retryDelay))
@@ -417,7 +398,6 @@ export async function updateOrderPayment(
     }
 
     const existingOrder = existing as { id: string; status: string; kitchen_status: string | null; customer_name: string; customer_phone: string; customer_email: string | null }
-    console.log('[DB] updateOrderPayment - Order found, current state:', existingOrder)
 
     // Vérifier si le numéro de facture existe déjà (sauf pour cette commande)
     if (currentInvoiceNumber) {
@@ -434,9 +414,7 @@ export async function updateOrderPayment(
           existingOrderId: invoice.id,
           currentOrderId: orderId,
         })
-        // Générer un nouveau numéro unique
         currentInvoiceNumber = await generateUniqueInvoiceNumber()
-        console.log('[DB] updateOrderPayment - Using new invoice number:', currentInvoiceNumber)
       }
     }
 
@@ -458,9 +436,7 @@ export async function updateOrderPayment(
     if (cp) row.customer_phone = cp
     if (ce !== undefined) row.customer_email = ce || null
 
-    console.log('[DB] updateOrderPayment - Updating with row:', JSON.stringify(row, null, 2))
-
-    const { data: updatedData, error } = await (supabase.from('orders') as any)
+    const { error } = await (supabase.from('orders') as any)
       .update(row)
       .eq('id', orderId)
       .select()
@@ -476,38 +452,23 @@ export async function updateOrderPayment(
       })
       lastError = error
       
-      // Si c'est une erreur de collision invoice_number (23505), générer un nouveau numéro et retry
       if (error.code === '23505' && error.details?.includes('invoice_number')) {
-        console.log('[DB] updateOrderPayment - Invoice number collision (23505), generating new number and retrying...')
         if (attempt < maxRetries - 1) {
           currentInvoiceNumber = await generateUniqueInvoiceNumber()
-          console.log('[DB] updateOrderPayment - New invoice number:', currentInvoiceNumber)
           await new Promise((resolve) => setTimeout(resolve, retryDelay))
           continue
         }
       }
-      
-      // Si c'est une erreur de "not found", on retry
+
       if (error.code === 'PGRST116' && attempt < maxRetries - 1) {
-        console.log('[DB] updateOrderPayment - PGRST116 error, retrying...')
         await new Promise((resolve) => setTimeout(resolve, retryDelay))
         continue
       }
       throw error
     }
     
-    // Mettre à jour payment.invoiceNumber avec le numéro final utilisé (au cas où il a été changé)
     payment.invoiceNumber = currentInvoiceNumber
-
-    console.log('[DB] updateOrderPayment - SUCCESS - Order updated:', {
-      orderId,
-      updatedData,
-      previousStatus: existingOrder.status,
-      newStatus: 'delivered',
-      invoiceNumber: currentInvoiceNumber,
-      previousInvoiceNumber: payment.invoiceNumber !== currentInvoiceNumber ? payment.invoiceNumber : undefined,
-    })
-    return // Succès
+    return
   }
 
   if (lastError) {
@@ -521,8 +482,6 @@ export async function updateOrderPayment(
 
 /** Annule une commande en base. La table associée n'est pas libérée automatiquement. */
 export async function cancelOrderInDb(orderId: string): Promise<void> {
-  console.log('[DB] cancelOrderInDb - Starting cancellation for order:', orderId)
-  
   // Mettre à jour le statut de la commande à 'cancelled'
   const { error: updateError } = await (supabase.from('orders') as any)
     .update({ status: 'cancelled' })
@@ -532,9 +491,6 @@ export async function cancelOrderInDb(orderId: string): Promise<void> {
     console.error('[DB] cancelOrderInDb - Error updating order status:', updateError)
     throw updateError
   }
-
-  console.log('[DB] cancelOrderInDb - Order status updated to cancelled:', orderId)
-  console.log('[DB] cancelOrderInDb - Note: Table is not automatically released. It must be released manually if needed.')
 }
 
 /** Met à jour les items d'une commande (supprime puis réinsère). */

@@ -24,9 +24,6 @@ export function useAuth() {
 
   useEffect(() => {
     if (!initialized) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[useAuth] Initializing auth store...')
-      }
       initialize()
     }
   }, [initialized, initialize])
@@ -87,31 +84,12 @@ export function useRequireAdmin(redirectTo: string = '/home') {
       // Attendre un peu pour que l'utilisateur soit complètement mappé (surtout pour les admins)
       // Cela évite les race conditions où le layout vérifie avant que mapSupabaseUserToUser soit terminé
       const checkTimer = setTimeout(() => {
-        if (process.env.NODE_ENV === 'development') {
-          console.log('[useRequireAdmin] Checking access:', {
-            hasUser: !!user,
-            userRole: user?.role,
-            isAdmin: user?.role === 'admin',
-          })
-        }
-
         if (!user) {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[useRequireAdmin] No user, redirecting to login')
-          }
           setIsRedirecting(true)
           router.push('/login')
         } else if (user.role !== 'admin') {
-          // Seuls les admins (de la table admins) peuvent accéder au dashboard
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[useRequireAdmin] User is not admin (role:', user.role, '), redirecting to', redirectTo)
-          }
           setIsRedirecting(true)
           router.push(redirectTo)
-        } else {
-          if (process.env.NODE_ENV === 'development') {
-            console.log('[useRequireAdmin] User is admin, access granted')
-          }
         }
       }, 1000) // Délai pour laisser le temps à mapSupabaseUserToUser de terminer
 

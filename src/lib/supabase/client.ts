@@ -59,28 +59,17 @@ export const supabase = createClient<Database>(supabaseUrl ?? '', supabaseAnonKe
   },
 })
 
-// Log l'initialisation du client
 if (typeof window !== 'undefined') {
-  console.log('[Supabase] Client initialized, checking session...')
-  
-  // Vérifier la session au chargement
-  supabase.auth.getSession().then(({ data: { session }, error }) => {
+  supabase.auth.getSession().then(({ error }) => {
     if (error) {
       console.error('[Supabase] Error getting initial session:', error)
-    } else if (session) {
-      console.log('[Supabase] Session found for:', session.user.email)
-    } else {
-      console.log('[Supabase] No session found (anonymous access)')
     }
   })
 
-  // Écouter les changements de localStorage pour synchroniser entre onglets
   window.addEventListener('storage', async (event) => {
     if (event.key === STORAGE_KEY) {
-      console.log('[Supabase] Storage changed in another tab, refreshing session...')
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        console.log('[Supabase] Session after storage change:', session?.user.email || 'none')
+        await supabase.auth.getSession()
       } catch (error) {
         console.warn('[Supabase] Error syncing session:', error)
       }
@@ -99,7 +88,6 @@ export async function checkSupabaseConnection(): Promise<boolean> {
       console.error('[Supabase] Connection check failed:', error.message)
       return false
     }
-    console.log('[Supabase] Connection check successful')
     return true
   } catch (error: any) {
     console.error('[Supabase] Connection check error:', error?.message || error)

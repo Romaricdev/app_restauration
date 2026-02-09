@@ -47,9 +47,8 @@ async function waitForSupabase(maxAttempts = 3, delayMs = 500): Promise<boolean>
       if (!error) {
         return true
       }
-      console.log(`[useDailyMenuItems] Supabase not ready, attempt ${i + 1}/${maxAttempts}`)
-    } catch (e) {
-      console.log(`[useDailyMenuItems] Supabase check failed, attempt ${i + 1}/${maxAttempts}`)
+    } catch {
+      // Supabase not ready, will retry
     }
     
     if (i < maxAttempts - 1) {
@@ -98,7 +97,6 @@ export function useDailyMenuItems(): UseDailyMenuItemsResult {
       if (!isMountedRef.current) return
 
       if (dailyMenus.length === 0) {
-        console.log('[useDailyMenuItems] No daily menus found')
         setMenuItems([])
         lastValidDataRef.current = []
         hasLoadedOnceRef.current = true
@@ -122,8 +120,6 @@ export function useDailyMenuItems(): UseDailyMenuItemsResult {
       const dailyProducts = allProducts.filter((product) => {
         return dailyMenuProductIds.has(Number(product.id))
       })
-
-      console.log('[useDailyMenuItems] Loaded', dailyProducts.length, 'daily products')
 
       if (isMountedRef.current) {
         setMenuItems(dailyProducts)

@@ -281,13 +281,9 @@ export const usePosStore = create<PosState>((set, get) => ({
             undefined,
             partySize !== undefined ? { currentPartySize: partySize } : undefined
           )
-          console.log(`[POS] Table ${tableNumber} marked as occupied`, partySize != null ? `(${partySize} pers.)` : '')
         } catch (error) {
           console.error(`[POS] Error updating table ${tableNumber} status:`, error)
-          // Ne pas bloquer l'interface en cas d'erreur
         }
-      } else {
-        console.log(`[POS] Offline - Table ${tableNumber} status update will be synced when online`)
       }
     }
   },
@@ -566,7 +562,6 @@ export const usePosStore = create<PosState>((set, get) => ({
         await updateTableStatusByNumber(currentOrder.tableNumber, 'available', null, {
           currentPartySize: null,
         })
-        console.log(`[POS] Table ${currentOrder.tableNumber} released`)
       } catch (error) {
         console.error(`[POS] Error releasing table ${currentOrder.tableNumber}:`, error)
       }
@@ -608,23 +603,7 @@ export const usePosStore = create<PosState>((set, get) => ({
     get().clearCurrentOrder()
 
     const createInput = buildCreateInput(activeOrder)
-    console.log('[STORE] validateOrder - Enqueuing create order:', {
-      orderId: createInput.id,
-      type: createInput.type,
-      tableId: createInput.tableId,
-      tableNumber: createInput.tableNumber,
-      customerName: createInput.customerName,
-      customerPhone: createInput.customerPhone,
-      customerEmail: createInput.customerEmail,
-      validatedAt: createInput.validatedAt,
-      kitchenStatus: createInput.kitchenStatus,
-      itemsCount: createInput.items.length,
-      subtotal: createInput.subtotal,
-      total: createInput.total,
-    })
-
     enqueueCreateOrder(createInput)
-    console.log('[STORE] validateOrder - Create order enqueued for:', createInput.id)
     return validatedOrder
   },
 
@@ -722,29 +701,12 @@ export const usePosStore = create<PosState>((set, get) => ({
 
   cancelActiveOrder: (orderId) => {
     const { activeOrders } = get()
-    const orderToCancel = activeOrders.find((o) => o.id === orderId)
-    
-    console.log('[POS] cancelActiveOrder - Cancelling order:', {
-      orderId,
-      hasTable: !!orderToCancel?.tableId,
-      tableId: orderToCancel?.tableId,
-      tableNumber: orderToCancel?.tableNumber,
-    })
 
-    // Retirer la commande du store
     set((state) => ({
       activeOrders: state.activeOrders.filter((order) => order.id !== orderId),
     }))
 
-    // Note: La table n'est PAS libérée automatiquement lors de l'annulation
-    // La table doit être libérée manuellement par l'utilisateur si nécessaire
-    // Cela permet de garder la table occupée même si la commande est annulée
-    // (par exemple, si les clients veulent recommander ou si la table est réservée)
-
-    // Enqueue l'annulation dans la DB (sans libérer la table)
     enqueueCancel(orderId)
-    console.log('[POS] cancelActiveOrder - Cancellation enqueued for order:', orderId)
-    console.log('[POS] cancelActiveOrder - Note: Table is not automatically released. It must be released manually if needed.')
   },
 
   removeItemFromActiveOrder: (orderId, itemId) => {
@@ -860,14 +822,6 @@ export const usePosStore = create<PosState>((set, get) => ({
       createdAt: orderToEdit.createdAt,
     }
 
-    console.log('[POS] reopenOrderForEditWithOrder - Opening order for edit:', {
-      orderId: orderToEdit.id,
-      itemsCount: editableOrder.items.length,
-      subtotal,
-      deliveryFee,
-      total,
-    })
-
     set({
       currentOrder: editableOrder,
       editingActiveOrderId: orderToEdit.id,
@@ -880,22 +834,12 @@ export const usePosStore = create<PosState>((set, get) => ({
     const { currentOrder, editingActiveOrderId, activeOrders } = get()
 
     if (!currentOrder || !editingActiveOrderId) {
-      // If no editing, just validate normally
       return get().validateOrder()
     }
 
-    console.log('[POS] validateOrderAdditions - Starting:', {
-      orderId: editingActiveOrderId,
-      currentItemsCount: currentOrder.items.length,
-      activeOrdersCount: activeOrders.length,
-    })
-
-    // Find the active order in store, or create a new ActiveOrder from currentOrder
     let existingOrder = activeOrders.find((o) => o.id === editingActiveOrderId)
-    
-    // If order not in store (e.g., from QR code), create ActiveOrder from currentOrder
+
     if (!existingOrder) {
-      console.log('[POS] validateOrderAdditions - Order not in store, creating from currentOrder')
       existingOrder = {
         ...currentOrder,
         validatedAt: currentOrder.createdAt,
@@ -929,15 +873,6 @@ export const usePosStore = create<PosState>((set, get) => ({
       kitchenStatus: existingOrder.kitchenStatus,
       originalItemIds,
     }
-
-    console.log('[POS] validateOrderAdditions - Updated order:', {
-      orderId: editingActiveOrderId,
-      itemsCount: updatedActiveOrder.items.length,
-      subtotal,
-      deliveryFee,
-      total,
-      originalItemsCount: originalItemIds.length,
-    })
 
     // Update or add to activeOrders
     const orderIndex = activeOrders.findIndex((o) => o.id === editingActiveOrderId)
@@ -980,16 +915,12 @@ export const usePosStore = create<PosState>((set, get) => ({
       }).then(({ error: updateError }) => {
         if (updateError) {
           console.error('[POS] validateOrderAdditions - Error updating order totals:', updateError)
-        } else {
-          console.log('[POS] validateOrderAdditions - Order totals updated in DB')
         }
       }).catch((error) => {
         console.error('[POS] validateOrderAdditions - Error updating order totals:', error)
-        // Non-blocking, continue anyway
       })
     }
-    
-    console.log('[POS] validateOrderAdditions - Order updated successfully')
+
     return updatedActiveOrder
   },
 
@@ -1044,19 +975,6 @@ export const usePosStore = create<PosState>((set, get) => ({
   // ============================================
 
   addPaidOrder: async (order, paymentMethod, amountReceived, change) => {
-    console.log('[STORE] addPaidOrder - START', {
-      orderId: order.id,
-      orderStatus: order.status,
-      orderKitchenStatus: order.kitchenStatus,
-      customerName: order.customerName,
-      customerPhone: order.customerPhone,
-      customerEmail: order.customerEmail,
-      paymentMethod,
-      amountReceived,
-      change,
-      total: order.total,
-    })
-
     const paidAt = new Date().toISOString()
     // Générer un numéro de facture provisoire (sera corrigé par updateOrderPayment si collision)
     // On utilise un numéro basé sur l'heure pour réduire les collisions
@@ -1066,8 +984,6 @@ export const usePosStore = create<PosState>((set, get) => ({
     // updateOrderPayment gérera les collisions et générera un numéro séquentiel correct
     const timeBasedNum = String(Math.floor(Date.now() / 1000) % 10000).padStart(4, '0')
     const invoiceNumber = `${datePrefix}-${timeBasedNum}`
-    
-    console.log('[STORE] addPaidOrder - Generated provisional invoice number:', invoiceNumber)
 
     const paidOrder: PaidOrder = {
       ...order,
@@ -1079,13 +995,6 @@ export const usePosStore = create<PosState>((set, get) => ({
       invoiceNumber,
       status: 'delivered',
     }
-
-    console.log('[STORE] addPaidOrder - Creating paidOrder:', {
-      id: paidOrder.id,
-      status: paidOrder.status,
-      invoiceNumber: paidOrder.invoiceNumber,
-      paidAt: paidOrder.paidAt,
-    })
 
     set((state) => ({
       paidOrders: [...state.paidOrders, paidOrder],
@@ -1102,15 +1011,8 @@ export const usePosStore = create<PosState>((set, get) => ({
       customerEmail: order.customerEmail?.trim() || undefined,
     }
 
-    console.log('[STORE] addPaidOrder - Enqueuing payment:', {
-      orderId: order.id,
-      paymentPayload,
-    })
-
     enqueuePayment(order.id, paymentPayload)
 
-    console.log('[STORE] addPaidOrder - Payment enqueued for order:', order.id)
-    
     // Libérer la table si c'est une commande sur place
     if (order.tableNumber) {
       const isOnline = typeof navigator !== 'undefined' && navigator.onLine
@@ -1119,12 +1021,9 @@ export const usePosStore = create<PosState>((set, get) => ({
           await updateTableStatusByNumber(order.tableNumber, 'available', null, {
             currentPartySize: null,
           })
-          console.log(`[POS] Table ${order.tableNumber} released after payment`)
         } catch (error) {
           console.error(`[POS] Error releasing table ${order.tableNumber} after payment:`, error)
         }
-      } else {
-        console.log(`[POS] Offline - Table ${order.tableNumber} release will be synced when online`)
       }
     }
   },

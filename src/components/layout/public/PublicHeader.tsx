@@ -46,11 +46,8 @@ export function PublicHeader() {
   const { user, signOut } = useAuth()
 
   const handleSignOut = async () => {
-    console.log('[PublicHeader] Signing out...')
     try {
       await signOut()
-      console.log('[PublicHeader] Sign out successful, redirecting to home')
-      // Attendre un peu pour que le store soit mis à jour
       await new Promise(resolve => setTimeout(resolve, 100))
       router.push('/home')
     } catch (error) {

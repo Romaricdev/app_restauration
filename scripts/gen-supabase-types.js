@@ -44,7 +44,6 @@ function extractProjectRef(url) {
 function main() {
   const url = readEnv()
   const projectRef = extractProjectRef(url)
-  console.log('[gen:types] Project ref:', projectRef)
 
   try {
     const stdout = execSync(
@@ -53,7 +52,6 @@ function main() {
     )
     fs.mkdirSync(path.dirname(outPath), { recursive: true })
     fs.writeFileSync(outPath, stdout)
-    console.log('[gen:types] Écrit:', outPath)
   } catch (e) {
     console.error('[gen:types] Échec. Vérifiez: supabase login, schéma déployé, project-id correct.')
     process.exit(1)

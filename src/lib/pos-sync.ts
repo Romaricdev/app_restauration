@@ -166,39 +166,22 @@ async function loadQueueFromIdb(): Promise<void> {
 }
 
 async function runOp(op: StoredOp): Promise<void> {
-  console.log('[POS-SYNC] runOp - START', {
-    type: op.type,
-    id: op.id,
-    orderId: 'orderId' in op ? op.orderId : op.type === 'create' ? op.payload.id : 'N/A',
-    createdAt: op.createdAt,
-  })
-
   try {
     switch (op.type) {
       case 'create':
-        console.log('[POS-SYNC] runOp - Executing CREATE:', op.payload.id)
         await createOrderFromPos(op.payload)
-        console.log('[POS-SYNC] runOp - CREATE SUCCESS:', op.payload.id)
         break
       case 'status':
-        console.log('[POS-SYNC] runOp - Executing STATUS UPDATE:', op.orderId, op.kitchenStatus)
         await updateOrderKitchenStatus(op.orderId, op.kitchenStatus)
-        console.log('[POS-SYNC] runOp - STATUS UPDATE SUCCESS:', op.orderId)
         break
       case 'payment':
-        console.log('[POS-SYNC] runOp - Executing PAYMENT:', op.orderId, op.payment)
         await updateOrderPayment(op.orderId, op.payment)
-        console.log('[POS-SYNC] runOp - PAYMENT SUCCESS:', op.orderId)
         break
       case 'cancel':
-        console.log('[POS-SYNC] runOp - Executing CANCEL:', op.orderId)
         await cancelOrderInDb(op.orderId)
-        console.log('[POS-SYNC] runOp - CANCEL SUCCESS:', op.orderId)
         break
       case 'items':
-        console.log('[POS-SYNC] runOp - Executing ITEMS UPDATE:', op.orderId, op.items.length, 'items')
         await updateOrderItemsInDb(op.orderId, op.items)
-        console.log('[POS-SYNC] runOp - ITEMS UPDATE SUCCESS:', op.orderId)
         break
       default:
         const err = new Error(`Unknown op type: ${(op as StoredOp).type}`)
@@ -277,15 +260,7 @@ function toStoredOp(op: PosSyncOp): StoredOp {
 export function enqueuePosSyncOp(op: PosSyncOp): void {
   const id = op.id
   const stored: StoredOp = toStoredOp({ ...op, id })
-  console.log('[POS-SYNC] enqueuePosSyncOp - Adding to queue:', {
-    type: stored.type,
-    id: stored.id,
-    orderId: 'orderId' in stored ? stored.orderId : stored.type === 'create' ? stored.payload.id : 'N/A',
-    queueLengthBefore: queue.length,
-    isOnline: isOnline(),
-  })
   queue.push(stored)
-  console.log('[POS-SYNC] enqueuePosSyncOp - Queue length after push:', queue.length)
   notify()
   if (isBrowser()) {
     addOpToIdb(stored).catch((err) => {
@@ -293,21 +268,12 @@ export function enqueuePosSyncOp(op: PosSyncOp): void {
     })
   }
   if (isOnline()) {
-    console.log('[POS-SYNC] enqueuePosSyncOp - Online, triggering processNext')
     processNext()
-  } else {
-    console.log('[POS-SYNC] enqueuePosSyncOp - Offline, op will be processed on reconnect')
   }
 }
 
 export function enqueueCreateOrder(input: CreateOrderFromPosInput): void {
-  console.log('[POS-SYNC] enqueueCreateOrder - Enqueuing create:', {
-    orderId: input.id,
-    type: input.type,
-    validatedAt: input.validatedAt,
-  })
   enqueuePosSyncOp({ type: 'create', id: uid(), payload: input })
-  console.log('[POS-SYNC] enqueueCreateOrder - Create enqueued for order:', input.id)
 }
 
 export function enqueueStatusUpdate(orderId: string, kitchenStatus: KitchenOrderStatus): void {
@@ -315,12 +281,7 @@ export function enqueueStatusUpdate(orderId: string, kitchenStatus: KitchenOrder
 }
 
 export function enqueuePayment(orderId: string, payment: UpdateOrderPaymentInput): void {
-  console.log('[POS-SYNC] enqueuePayment - Enqueuing payment:', {
-    orderId,
-    payment,
-  })
   enqueuePosSyncOp({ type: 'payment', id: uid(), orderId, payment })
-  console.log('[POS-SYNC] enqueuePayment - Payment enqueued for order:', orderId)
 }
 
 export function enqueueCancel(orderId: string): void {

@@ -4,6 +4,35 @@ import { supabase } from '@/lib/supabase/client'
 import type { User } from '@/types'
 import type { User as SupabaseUser } from '@supabase/supabase-js'
 
+/** Ligne table admins (schéma DB) */
+interface AdminRow {
+  id: string
+  name: string
+  email: string
+  avatar_url?: string | null
+  created_at: string
+  last_login_at?: string | null
+}
+
+/** Ligne table profiles (schéma DB) */
+interface ProfileRow {
+  id: string
+  name: string
+  email: string
+  role: string
+  avatar_url?: string | null
+  created_at: string
+}
+
+/** Type pour les appels Supabase admins/profiles (types générés absents) */
+type AuthTableChain = {
+  select: (cols?: string) => { eq: (col: string, val: string) => { maybeSingle: () => Promise<{ data: AdminRow | ProfileRow | null; error: unknown }> } }
+  update: (v: { last_login_at: string }) => { eq: (col: string, val: string) => { then: (onFulfilled?: () => void, onRejected?: (e: unknown) => void) => Promise<unknown> } }
+  insert: (v: { id: string; name: string; email: string; role: string }) => { select: () => { maybeSingle: () => Promise<{ data: ProfileRow | null; error: unknown }> } }
+}
+
+const authDb = supabase as unknown as { from: (table: 'admins' | 'profiles') => AuthTableChain }
+
 interface AuthState {
   user: User | null
   supabaseUser: SupabaseUser | null
@@ -22,21 +51,20 @@ interface AuthState {
 /**
  * Vérifie si une erreur est vide ou non significative
  */
-function isEmptyOrAbortError(error: any): boolean {
+function isEmptyOrAbortError(error: unknown): boolean {
   if (!error) return true
-  
+  const err = error as { name?: string; code?: string; message?: string }
   if (
-    error?.name === 'AbortError' ||
-    error?.code === 'ABORTED' ||
-    error?.message?.includes('aborted') ||
-    error?.message?.includes('AbortError')
+    err?.name === 'AbortError' ||
+    err?.code === 'ABORTED' ||
+    err?.message?.includes('aborted') ||
+    err?.message?.includes('AbortError')
   ) {
     return true
   }
-  
   if (typeof error === 'object') {
-    const hasCode = error.code && error.code !== 'PGRST116'
-    const hasMessage = error.message && error.message.length > 0
+    const hasCode = err?.code && err.code !== 'PGRST116'
+    const hasMessage = err?.message && err.message.length > 0
     if (!hasCode && !hasMessage) {
       return true
     }
@@ -63,61 +91,61 @@ async function mapSupabaseUserToUser(supabaseUser: SupabaseUser | null): Promise
 
   // PRIORITÉ 1 : Vérifier si l'utilisateur est un admin
   try {
-    const { data: admin, error: adminError } = await (supabase as any)
+    const { data: admin, error: adminError } = await authDb
       .from('admins')
       .select('*')
       .eq('email', supabaseUser.email)
       .maybeSingle()
 
-    if (admin && !adminError) {
-      console.log('[AuthStore] Admin found:', admin.email)
-      
-      ;(supabase as any)
+    const adminRow = admin as AdminRow | null
+    if (adminRow && !adminError) {
+      authDb
         .from('admins')
         .update({ last_login_at: new Date().toISOString() })
-        .eq('id', admin.id)
+        .eq('id', adminRow.id)
         .then(() => {}, () => {})
 
       return {
-        id: admin.id,
-        name: admin.name,
-        email: admin.email,
+        id: adminRow.id,
+        name: adminRow.name,
+        email: adminRow.email,
         role: 'admin' as User['role'],
-        avatar: admin.avatar_url || undefined,
-        createdAt: admin.created_at,
+        avatar: adminRow.avatar_url ?? undefined,
+        createdAt: adminRow.created_at,
       }
     }
-    
-    if (adminError && !isEmptyOrAbortError(adminError) && adminError.code !== 'PGRST116') {
-      console.warn('[Auth] Admin check error:', adminError.message || adminError.code)
+    const err = adminError as { code?: string; message?: string } | null
+    if (err && !isEmptyOrAbortError(adminError) && err.code !== 'PGRST116') {
+      console.warn('[Auth] Admin check error:', err.message ?? err.code)
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (!isEmptyOrAbortError(error)) {
-      console.warn('[Auth] Admin check failed:', error?.message)
+      console.warn('[Auth] Admin check failed:', error instanceof Error ? error.message : String(error))
     }
   }
 
   // PRIORITÉ 2 : Récupérer le profil
   try {
-    const { data: profile, error: profileError } = await (supabase as any)
+    const { data: profile, error: profileError } = await authDb
       .from('profiles')
       .select('*')
       .eq('id', supabaseUser.id)
       .maybeSingle()
 
-    if (profile && !profileError) {
+    const profileRow = profile as ProfileRow | null
+    if (profileRow && !profileError) {
       return {
-        id: profile.id,
-        name: profile.name,
-        email: profile.email,
-        role: profile.role as User['role'],
-        avatar: profile.avatar_url || undefined,
-        createdAt: profile.created_at,
+        id: profileRow.id,
+        name: profileRow.name,
+        email: profileRow.email,
+        role: profileRow.role as User['role'],
+        avatar: profileRow.avatar_url ?? undefined,
+        createdAt: profileRow.created_at,
       }
     }
-    
-    if (!profile) {
-      const { data: newProfile, error: createError } = await (supabase as any)
+
+    if (!profileRow) {
+      const { data: newProfile, error: createError } = await authDb
         .from('profiles')
         .insert({
           id: supabaseUser.id,
@@ -128,48 +156,50 @@ async function mapSupabaseUserToUser(supabaseUser: SupabaseUser | null): Promise
         .select()
         .maybeSingle()
 
-      if (newProfile && !createError) {
+      const newProfileRow = newProfile as ProfileRow | null
+      if (newProfileRow && !createError) {
         return {
-          id: newProfile.id,
-          name: newProfile.name,
-          email: newProfile.email,
-          role: newProfile.role as User['role'],
-          avatar: newProfile.avatar_url || undefined,
-          createdAt: newProfile.created_at,
+          id: newProfileRow.id,
+          name: newProfileRow.name,
+          email: newProfileRow.email,
+          role: newProfileRow.role as User['role'],
+          avatar: newProfileRow.avatar_url ?? undefined,
+          createdAt: newProfileRow.created_at,
         }
       }
 
-      if (createError?.code === '23505') {
+      const createErr = createError as { code?: string; message?: string } | null
+      if (createErr?.code === '23505') {
         await new Promise(resolve => setTimeout(resolve, 200))
-        const { data: retryProfile } = await (supabase as any)
+        const { data: retryProfile } = await authDb
           .from('profiles')
           .select('*')
           .eq('id', supabaseUser.id)
           .maybeSingle()
-        
-        if (retryProfile) {
+
+        const retryProfileRow = retryProfile as ProfileRow | null
+        if (retryProfileRow) {
           return {
-            id: retryProfile.id,
-            name: retryProfile.name,
-            email: retryProfile.email,
-            role: retryProfile.role as User['role'],
-            avatar: retryProfile.avatar_url || undefined,
-            createdAt: retryProfile.created_at,
+            id: retryProfileRow.id,
+            name: retryProfileRow.name,
+            email: retryProfileRow.email,
+            role: retryProfileRow.role as User['role'],
+            avatar: retryProfileRow.avatar_url ?? undefined,
+            createdAt: retryProfileRow.created_at,
           }
         }
       }
-      
-      if (createError && !isEmptyOrAbortError(createError) && createError.code !== '23505') {
-        console.warn('[Auth] Profile creation error:', createError.message || createError.code)
+
+      if (createErr && !isEmptyOrAbortError(createError) && createErr.code !== '23505') {
+        console.warn('[Auth] Profile creation error:', createErr.message ?? createErr.code)
       }
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (!isEmptyOrAbortError(error)) {
-      console.warn('[Auth] Profile check failed:', error?.message)
+      console.warn('[Auth] Profile check failed:', error instanceof Error ? error.message : String(error))
     }
   }
 
-  console.log('[Auth] Using minimal user data for:', supabaseUser.email)
   return {
     id: supabaseUser.id,
     name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
@@ -205,9 +235,7 @@ export const useAuthStore = create<AuthState>()(
 
           if (data.user) {
             const user = await mapSupabaseUserToUser(data.user)
-            
-            console.log('[AuthStore] User mapped after signIn:', user?.email, 'role:', user?.role)
-            
+
             if (!user) {
               set({ loading: false })
               return { error: new Error('Failed to map user data') }
@@ -252,7 +280,7 @@ export const useAuthStore = create<AuthState>()(
           if (data.user) {
             await new Promise(resolve => setTimeout(resolve, 500))
             
-            const { error: profileError } = await (supabase as any)
+            const { error: profileError } = await authDb
               .from('profiles')
               .insert({
                 id: data.user.id,
@@ -263,8 +291,9 @@ export const useAuthStore = create<AuthState>()(
               .select()
               .maybeSingle()
 
-            if (profileError && profileError.code !== '23505' && !isEmptyOrAbortError(profileError)) {
-              console.warn('[Auth] Profile creation during signup:', profileError.message)
+            const err = profileError as { code?: string; message?: string } | null
+            if (err && err.code !== '23505' && !isEmptyOrAbortError(profileError)) {
+              console.warn('[Auth] Profile creation during signup:', err.message)
             }
 
             const user = await mapSupabaseUserToUser(data.user)
@@ -310,15 +339,12 @@ export const useAuthStore = create<AuthState>()(
       },
 
       initialize: async () => {
-        // Si déjà initialisé, ne pas ré-initialiser
         if (get().initialized && get().user) {
-          console.log('[AuthStore] Already initialized with user:', get().user?.email)
           return
         }
 
         set({ loading: true })
-        console.log('[AuthStore] Initializing...')
-        
+
         try {
           const { data: { session }, error } = await supabase.auth.getSession()
 
@@ -329,10 +355,8 @@ export const useAuthStore = create<AuthState>()(
           }
 
           if (session?.user) {
-            console.log('[AuthStore] Session found for:', session.user.email)
             try {
               const user = await mapSupabaseUserToUser(session.user)
-              console.log('[AuthStore] User mapped:', user?.email, 'role:', user?.role)
               set({
                 user,
                 supabaseUser: session.user,
@@ -349,7 +373,6 @@ export const useAuthStore = create<AuthState>()(
               })
             }
           } else {
-            console.log('[AuthStore] No session found')
             set({
               user: null,
               supabaseUser: null,
@@ -358,15 +381,10 @@ export const useAuthStore = create<AuthState>()(
             })
           }
 
-          // Écouter les changements d'authentification
           supabase.auth.onAuthStateChange(async (event, session) => {
-            console.log('[AuthStore] Auth state changed:', event)
-            
             if (event === 'SIGNED_IN' && session?.user) {
               try {
                 const user = await mapSupabaseUserToUser(session.user)
-                console.log('[AuthStore] User signed in:', user?.email, 'role:', user?.role)
-                
                 set({
                   user,
                   supabaseUser: session.user,
@@ -404,7 +422,6 @@ export const useAuthStore = create<AuthState>()(
       },
 
       refreshSession: async () => {
-        console.log('[AuthStore] Refreshing session...')
         try {
           const { data: { session }, error } = await supabase.auth.getSession()
 
@@ -415,14 +432,12 @@ export const useAuthStore = create<AuthState>()(
 
           if (session?.user) {
             const user = await mapSupabaseUserToUser(session.user)
-            console.log('[AuthStore] Session refreshed for:', user?.email)
             set({
               user,
               supabaseUser: session.user,
               initialized: true,
             })
           } else {
-            console.log('[AuthStore] No session found during refresh')
             set({
               user: null,
               supabaseUser: null,

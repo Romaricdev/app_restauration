@@ -11,6 +11,7 @@ interface DbMenuItem {
   available: boolean
   popular: boolean | null
   preparation_time: number | null
+  allergens?: string[] | null
   created_at: string
   updated_at: string
 }
@@ -26,6 +27,7 @@ function mapMenuItem(row: DbMenuItem): MenuItem {
     available: row.available,
     popular: row.popular ?? undefined,
     preparationTime: row.preparation_time ?? undefined,
+    allergens: row.allergens ?? undefined,
   }
 }
 

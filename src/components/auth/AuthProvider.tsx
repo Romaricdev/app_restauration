@@ -28,7 +28,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (stored) {
         const parsed = JSON.parse(stored)
         if (parsed?.state?.user) {
-          console.log('[AuthProvider] Syncing user from storage:', parsed.state.user.email)
           setUser(parsed.state.user)
         }
       }
@@ -42,7 +41,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     try {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        console.log('[AuthProvider] Session found, refreshing...')
         await refreshSession()
       }
     } catch (error) {
@@ -55,16 +53,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (isInitializingRef.current) return
     isInitializingRef.current = true
 
-    // Initialiser l'authentification
-    console.log('[AuthProvider] Initializing auth...')
-    initialize().then(() => {
-      console.log('[AuthProvider] Auth initialized')
-    })
+    initialize().then(() => {})
 
     // Écouter les changements de visibilité (quand l'utilisateur revient sur l'onglet)
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        console.log('[AuthProvider] Tab visible, syncing...')
         syncFromStorage()
         syncSession()
       }
@@ -73,7 +66,6 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Écouter les changements de localStorage (session modifiée dans un autre onglet)
     const handleStorageChange = (event: StorageEvent) => {
       if (event.key === AUTH_STORAGE_KEY || event.key === 'mindef-app-auth') {
-        console.log('[AuthProvider] Storage changed, syncing...')
         syncFromStorage()
         syncSession()
       }

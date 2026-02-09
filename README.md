@@ -128,6 +128,10 @@ npm run start    # Démarrer en production
 npm run lint     # Vérifier le code
 \`\`\`
 
+## 📚 Documentation
+
+- **[Intégration Campay (Mobile Money)](docs/CAMPAY_INTEGRATION.md)** — Procédure d’implémentation, flux de paiement MTN/Orange, configuration et bonnes pratiques.
+
 ## 📄 License
 
 ISC

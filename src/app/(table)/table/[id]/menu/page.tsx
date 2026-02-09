@@ -313,31 +313,9 @@ export default function TableMenuPage({ params }: TableMenuPageProps) {
 
   // Afficher tous les produits disponibles du menu du jour (sans filtre par catégorie)
   const availableItems = useMemo(
-    () => {
-      const items = menuItems.filter(item => item.available)
-      console.log('[TableMenuPage] Available items from menu du jour:', items.length, 'from', menuItems.length, 'total items')
-      console.log('[TableMenuPage] All available items:', items.map(item => ({ id: item.id, name: item.name, categoryId: item.categoryId })))
-      return items
-    },
+    () => menuItems.filter(item => item.available),
     [menuItems]
   )
-  
-  // Logs pour déboguer
-  useEffect(() => {
-    console.log('[TableMenuPage] Final State:', {
-      dailyMenuItemsCount: dailyMenuItems.length,
-      finalMenuItemsCount: menuItems.length,
-      availableItemsCount: availableItems.length,
-      menuItemsError: menuItemsError,
-      hasDailyMenuError,
-      finalError: error,
-      loading,
-      menuItemsLoading,
-      dailyMenuItems: dailyMenuItems.map(item => ({ id: item.id, name: item.name, categoryId: item.categoryId })),
-      finalMenuItems: menuItems.map(item => ({ id: item.id, name: item.name, categoryId: item.categoryId })),
-      availableItems: availableItems.map(item => ({ id: item.id, name: item.name, categoryId: item.categoryId })),
-    })
-  }, [dailyMenuItems, menuItems, availableItems, menuItemsError, hasDailyMenuError, error, loading, menuItemsLoading])
 
   const handleOpenAddonModal = (item: MenuItem) => {
     setAddonModalProduct(item)

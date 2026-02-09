@@ -33,16 +33,9 @@ export function CurrentOrderPanel() {
     // Check if we're completing an existing order or creating a new one
     if (isEditingExistingOrder) {
       // Merge additions with existing active order
-      const updatedOrder = validateOrderAdditions()
-      if (updatedOrder) {
-        console.log('Order updated with additions:', updatedOrder)
-      }
+      validateOrderAdditions()
     } else {
-      // Create new order and send to kitchen
-      const order = validateOrder()
-      if (order) {
-        console.log('Order validated and sent to kitchen:', order)
-      }
+      validateOrder()
     }
   }
 

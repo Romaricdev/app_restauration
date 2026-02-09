@@ -47,17 +47,6 @@ function ProductCard({ product, categoryName, onEdit, onToggleAvailable, onDelet
   const isSupabasePublicImage =
     /^https:\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\//i.test(productImage)
   
-  // Debug: log pour vérifier l'image
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[ProductCard] Product:', {
-      id: product.id,
-      name: product.name,
-      image: product.image,
-      productImage,
-      isSupabasePublicImage,
-    })
-  }
-
   return (
     <Card variant="dashboard" padding="none" interactive className="overflow-hidden">
       {/* Image */}

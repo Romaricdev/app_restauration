@@ -306,30 +306,13 @@ export default function TableCartPage({ params }: TableCartPageProps) {
           addons: item.addons ?? [],
         }
       })
-      
-      console.log('[TableCartPage] Prepared order items:', orderItems.map(i => ({
-        menuItemId: i.menuItemId,
-        name: i.name,
-        quantity: i.quantity,
-        price: i.price,
-      })))
 
       // Créer la commande dans la base de données
       const tableId = typeof table.id === 'number' ? table.id : Number(table.id)
       if (isNaN(tableId)) {
         throw new Error(`ID de table invalide: ${table.id}`)
       }
-      
-      console.log('[TableCartPage] Creating order with:', {
-        orderId,
-        tableId,
-        tableNumber,
-        itemsCount: orderItems.length,
-        subtotal,
-        serviceFee,
-        total,
-      })
-      
+
       await createOrderFromPos({
         id: orderId,
         type: 'dine-in',
@@ -349,12 +332,8 @@ export default function TableCartPage({ params }: TableCartPageProps) {
         items: orderItems,
       })
 
-      console.log('[TableCartPage] Order created successfully, updating table status...')
-
       // Mettre à jour le statut de la table
       await updateTableStatus(table.id, 'occupied', orderId)
-      
-      console.log('[TableCartPage] Table status updated successfully')
 
       // Clear cart and show success
       clearCart()

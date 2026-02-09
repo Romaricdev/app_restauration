@@ -90,8 +90,7 @@ export function PosLayout({
         await updateTableStatusByNumber(tableNumber, 'available', null, {
           currentPartySize: null,
         })
-        console.log(`[POS] Table ${tableNumber} released manually`)
-        
+
         // Mettre à jour localement l'état de la table immédiatement
         setTables((prevTables) =>
           prevTables.map((t) =>
@@ -105,7 +104,6 @@ export function PosLayout({
         throw error
       }
     } else {
-      console.log(`[POS] Offline - Table ${tableNumber} release will be synced when online`)
       // En mode hors ligne, on peut quand même mettre à jour localement
       // mais la synchronisation se fera quand on sera en ligne
       setTables((prevTables) =>

@@ -88,12 +88,9 @@ export function DashboardTopbar() {
                   </div>
                   <button
                     onClick={async () => {
-                      console.log('[DashboardTopbar] Signing out...')
                       setUserMenuOpen(false)
                       try {
                         await signOut()
-                        console.log('[DashboardTopbar] Sign out successful, redirecting to login')
-                        // Attendre un peu pour que le store soit mis à jour
                         await new Promise(resolve => setTimeout(resolve, 100))
                         router.push('/login')
                       } catch (error) {

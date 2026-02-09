@@ -46,10 +46,21 @@ export function formatTime(date: Date | string): string {
 }
 
 /**
- * Generate a random ID
+ * Generate a random ID (crypto-safe when available).
+ * Uses crypto.randomUUID() in modern envs, fallback for older runtimes.
  */
 export function generateId(): string {
-  return Math.random().toString(36).substring(2, 9)
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID()
+  }
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const buf = new Uint8Array(16)
+    crypto.getRandomValues(buf)
+    buf[6] = (buf[6]! & 0x0f) | 0x40
+    buf[8] = (buf[8]! & 0x3f) | 0x80
+    return [...buf].map((b) => b.toString(16).padStart(2, '0')).join('')
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36)
 }
 
 /**

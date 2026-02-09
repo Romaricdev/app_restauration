@@ -123,7 +123,6 @@ export async function fetchDailyMenus(): Promise<Menu[]> {
   try {
     const menus = await fetchActiveMenus()
     const dailyMenus = menus.filter((m) => m.type === 'daily')
-    console.log('[fetchDailyMenus] Active menus:', menus.length, 'Daily menus:', dailyMenus.length)
     return dailyMenus
   } catch (error: any) {
     // Ne pas logger les erreurs d'annulation comme des erreurs critiques

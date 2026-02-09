@@ -27,6 +27,7 @@ pnpm-lock.yaml.*
 ### OS / Editor junk
 .DS_Store
 Thumbs.db
+nul
 *.log
 *.tmp
 *.swp

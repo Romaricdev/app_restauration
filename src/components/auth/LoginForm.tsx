@@ -7,6 +7,7 @@ import { Input } from '@/components/ui'
 import { Button } from '@/components/ui'
 import { Mail, Lock, Eye, EyeOff, AlertCircle, CheckCircle2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { loginSchema, zodErrorsToFieldErrors } from '@/lib/validations/auth.schema'
 import { ReCaptcha } from './ReCaptcha'
 import { useAuth } from '@/hooks/useAuth'
 import { useAuthStore } from '@/store/auth-store'
@@ -46,25 +47,15 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
         // Toujours vérifier depuis le store pour avoir la valeur la plus à jour
         const { user: storeUser } = useAuthStore.getState()
         const finalUser = storeUser || authUser
-        
-        console.log('[LoginForm] Redirect check:', {
-          showSuccess,
-          authUser: authUser ? { email: authUser.email, role: authUser.role } : null,
-          storeUser: storeUser ? { email: storeUser.email, role: storeUser.role } : null,
-          finalUser: finalUser ? { email: finalUser.email, role: finalUser.role } : null,
-        })
-        
+
         if (!finalUser) {
           console.warn('[LoginForm] No user found, cannot redirect')
           return
         }
-        
-        // Rediriger selon le rôle
+
         if (finalUser.role === 'admin') {
-          console.log('[LoginForm] Redirecting admin to dashboard')
           router.push('/dashboard')
         } else {
-          console.log('[LoginForm] Redirecting non-admin to home (role:', finalUser.role, ')')
           router.push('/home')
         }
       }, 1000) // Délai plus long pour s'assurer que tout est synchronisé
@@ -83,28 +74,24 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
   }
 
   const validate = (): boolean => {
-    const newErrors: Partial<LoginFormData> = {}
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'L\'email est requis'
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Format d\'email invalide'
+    const result = loginSchema.safeParse(formData)
+    if (result.success) {
+      setErrors({})
+      if (!recaptchaVerified) {
+        setRecaptchaError(true)
+        return false
+      }
+      setRecaptchaError(false)
+      return true
     }
-
-    if (!formData.password.trim()) {
-      newErrors.password = 'Le mot de passe est requis'
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Le mot de passe doit contenir au moins 6 caractères'
-    }
-
+    const newErrors = zodErrorsToFieldErrors<keyof LoginFormData>(result)
+    setErrors(newErrors)
     if (!recaptchaVerified) {
       setRecaptchaError(true)
     } else {
       setRecaptchaError(false)
     }
-
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0 && recaptchaVerified
+    return false
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

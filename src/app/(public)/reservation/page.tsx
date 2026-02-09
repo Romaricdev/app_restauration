@@ -17,6 +17,7 @@ import { Calendar, ArrowLeft } from 'lucide-react'
 import { FadeIn } from '@/components/animations'
 import { HallDetailsModal } from '@/components/modals'
 import { createTableReservation } from '@/lib/data/reservations'
+import { validateTableReservation } from '@/lib/validations/reservation.schema'
 import type { Hall, ReservationSlotType } from '@/types'
 
 // ============================================
@@ -68,42 +69,12 @@ function ReservationHero({ reservationType }: { reservationType?: 'table' | 'hal
 }
 
 // ============================================
-// VALIDATION
+// VALIDATION (Zod)
 // ============================================
 
 function validateForm(data: ReservationFormData): Partial<Record<keyof ReservationFormData, string>> {
-  const errors: Partial<Record<keyof ReservationFormData, string>> = {}
-
-  if (!data.fullName.trim()) {
-    errors.fullName = 'Le nom est requis'
-  }
-
-  if (!data.phone.trim()) {
-    errors.phone = 'Le numéro de téléphone est requis'
-  } else if (!/^(\+237|237)?[6-9]\d{8}$/.test(data.phone.replace(/\s/g, ''))) {
-    errors.phone = 'Format de téléphone invalide'
-  }
-
-  if (!data.date) {
-    errors.date = 'La date est requise'
-  } else {
-    const selectedDate = new Date(data.date)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-    if (selectedDate < today) {
-      errors.date = 'La date ne peut pas être dans le passé'
-    }
-  }
-
-  if (!data.time) {
-    errors.time = 'L\'heure est requise'
-  }
-
-  if (!data.partySize) {
-    errors.partySize = 'Le nombre de personnes est requis'
-  }
-
-  return errors
+  const errors = validateTableReservation(data as unknown as Record<string, unknown>)
+  return errors ?? {}
 }
 
 // ============================================

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import Image from 'next/image'
 import { useCartStore } from '@/store/cart-store'
 import { Badge } from '@/components/ui'
@@ -9,6 +9,13 @@ import { Clock, Utensils } from 'lucide-react'
 import type { MenuItem } from '@/types'
 import { FadeIn, Stagger } from '@/components/animations'
 import { useDailyMenuItems } from '@/hooks'
+
+function sameMenuItemId(a: string | number, b: string | number): boolean {
+  if (a === b) return true
+  const na = Number(a)
+  const nb = Number(b)
+  return !Number.isNaN(na) && !Number.isNaN(nb) && na === nb
+}
 
 // ============================================
 // HERO SECTION
@@ -61,7 +68,7 @@ interface MenuItemCardProps {
 
 function MenuItemCard({ item, onAddToCart, isAdding = false }: MenuItemCardProps) {
   const { items: cartItems, removeItem } = useCartStore()
-  const cartItem = cartItems.find((ci) => ci.menuItemId === item.id)
+  const cartItem = cartItems.find((ci) => sameMenuItemId(ci.menuItemId, item.id))
   const isSelected = cartItem !== undefined
 
   const imageSrc = item.image || ''
@@ -131,14 +138,19 @@ function MenuItemCard({ item, onAddToCart, isAdding = false }: MenuItemCardProps
         {/* Bouton : sélectionné = vert, pas d'icône ; désélection possible */}
         <button
           type="button"
-          onClick={handleToggle}
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            handleToggle()
+          }}
           disabled={!item.available || isAdding}
           className={cn(
-            'rounded-lg transition-all duration-200 min-h-[40px] sm:min-h-[44px] px-4 sm:px-5 text-sm font-medium shrink-0',
+            'rounded-lg transition-all duration-200 min-h-[40px] sm:min-h-[44px] px-4 sm:px-5 text-sm font-medium shrink-0 cursor-pointer',
             isSelected
               ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-0'
               : 'bg-gray-100 hover:bg-gray-200 text-gray-700 border border-gray-200'
           )}
+          aria-label={isSelected ? 'Retirer du panier' : 'Ajouter au panier'}
         >
           {isSelected ? 'Sélectionné' : 'Sélectionner'}
         </button>
@@ -156,21 +168,23 @@ export default function MenuPage() {
   const [addingItemId, setAddingItemId] = useState<number | string | null>(null)
   const { addItem } = useCartStore()
 
-  // Afficher tous les produits disponibles du menu du jour (sans filtre par catégorie)
   const availableItems = useMemo(
-    () => {
-      const items = dailyMenuItems.filter(item => item.available)
-      return items
-    },
+    () => dailyMenuItems.filter((item) => item.available),
     [dailyMenuItems]
   )
 
-  const handleAddToCart = async (item: MenuItem) => {
-    setAddingItemId(item.id)
-    addItem(item, 1)
-    await new Promise((resolve) => setTimeout(resolve, 300))
-    setAddingItemId(null)
-  }
+  const handleAddToCart = useCallback(
+    async (item: MenuItem) => {
+      setAddingItemId(item.id)
+      try {
+        addItem(item, 1)
+      } finally {
+        await new Promise((resolve) => setTimeout(resolve, 300))
+        setAddingItemId(null)
+      }
+    },
+    [addItem]
+  )
 
   return (
     <>
@@ -216,7 +230,7 @@ export default function MenuPage() {
                 Menu du jour - {availableItems.length} {availableItems.length === 1 ? 'plat disponible' : 'plats disponibles'}
               </Badge>
             </div>
-            
+
             {availableItems.length > 0 ? (
               <Stagger className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
                 {availableItems.map((item) => (

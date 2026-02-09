@@ -88,6 +88,27 @@ export const MENU_CATEGORIES = [
 ] as const
 
 // ============================================
+// Allergens (for menu filters)
+// ============================================
+
+export const ALLERGENS = [
+  { id: 'gluten', label: 'Gluten' },
+  { id: 'lactose', label: 'Lactose' },
+  { id: 'arachides', label: 'Arachides' },
+  { id: 'fruits-a-coque', label: 'Fruits à coque' },
+  { id: 'soja', label: 'Soja' },
+  { id: 'oeufs', label: 'Œufs' },
+  { id: 'poisson', label: 'Poisson' },
+  { id: 'crustaces', label: 'Crustacés' },
+  { id: 'mollusques', label: 'Mollusques' },
+  { id: 'celeri', label: 'Céleri' },
+  { id: 'moutarde', label: 'Moutarde' },
+  { id: 'sesame', label: 'Sésame' },
+  { id: 'sulfites', label: 'Sulfites' },
+  { id: 'lupin', label: 'Lupin' },
+] as const
+
+// ============================================
 // Time Slots for Reservations
 // ============================================
 
@@ -118,6 +139,14 @@ export const RESTAURANT_INFO = {
 export const DELIVERY_CONFIG = {
   defaultDeliveryFee: 1500, // Frais de livraison par défaut en FCFA
 } as const
+
+// ============================================
+// Cart persistence (localStorage)
+// ============================================
+
+export const CART_STORAGE_KEY = 'mess_cart'
+/** Durée de vie du panier en localStorage (heures). Au-delà, le panier est vidé à l'ouverture. */
+export const CART_EXPIRATION_HOURS = 24
 
 // ============================================
 // Order Type Labels

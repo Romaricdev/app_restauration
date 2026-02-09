@@ -4,9 +4,9 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCartStore } from '@/store/cart-store'
-import { Card, CardContent, Button, Badge } from '@/components/ui'
+import { Card, Button, Badge } from '@/components/ui'
 import { CheckoutForm } from '@/components/checkout'
-import { formatPrice, cn } from '@/lib/utils'
+import { formatPrice } from '@/lib/utils'
 import {
   ShoppingBag,
   Plus,
@@ -16,7 +16,9 @@ import {
   Utensils,
   CheckCircle2,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Smartphone,
+  Truck
 } from 'lucide-react'
 
 // ============================================
@@ -109,11 +111,14 @@ function CartItemCard({ item, onUpdateQuantity, onRemove }: CartItemCardProps) {
 // ORDER SUMMARY
 // ============================================
 
+export type PaymentOption = 'on_delivery' | 'mobile_money'
+
 interface OrderSummaryProps {
   subtotal: number
-  serviceFee: number
   deliveryFee: number
   total: number
+  paymentOption: PaymentOption
+  onPaymentOptionChange: (option: PaymentOption) => void
   onCheckout: () => void
   isLoading?: boolean
   canCheckout: boolean
@@ -121,9 +126,10 @@ interface OrderSummaryProps {
 
 function OrderSummary({
   subtotal,
-  serviceFee,
   deliveryFee,
   total,
+  paymentOption,
+  onPaymentOptionChange,
   onCheckout,
   isLoading = false,
   canCheckout
@@ -137,10 +143,6 @@ function OrderSummary({
           <span>Sous-total</span>
           <span className="font-semibold">{formatPrice(subtotal, 'XAF').replace('XAF', 'FCFA')}</span>
         </div>
-        <div className="flex justify-between text-base sm:text-lg text-gray-700">
-          <span>Frais de service</span>
-          <span className="font-semibold">{formatPrice(serviceFee, 'XAF').replace('XAF', 'FCFA')}</span>
-        </div>
         {deliveryFee > 0 && (
           <div className="flex justify-between text-base sm:text-lg text-gray-700">
             <span>Frais de livraison</span>
@@ -150,6 +152,36 @@ function OrderSummary({
         <div className="border-t-2 border-gray-300 pt-4 sm:pt-5 flex justify-between">
           <span className="text-lg sm:text-xl font-bold text-gray-900">Total</span>
           <span className="text-xl sm:text-2xl font-bold text-[#F4A024]">{formatPrice(total, 'XAF').replace('XAF', 'FCFA')}</span>
+        </div>
+      </div>
+
+      <div className="mb-6">
+        <p className="text-sm font-semibold text-gray-900 mb-3">Mode de paiement</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button
+            type="button"
+            onClick={() => onPaymentOptionChange('on_delivery')}
+            className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all text-sm font-medium ${
+              paymentOption === 'on_delivery'
+                ? 'border-[#F4A024] bg-[#F4A024]/10 text-[#F4A024]'
+                : 'border-gray-200 hover:border-gray-300 text-gray-700'
+            }`}
+          >
+            <Truck className="w-4 h-4" />
+            À la livraison / remise
+          </button>
+          <button
+            type="button"
+            onClick={() => onPaymentOptionChange('mobile_money')}
+            className={`flex items-center justify-center gap-2 p-3 rounded-lg border-2 transition-all text-sm font-medium ${
+              paymentOption === 'mobile_money'
+                ? 'border-[#F4A024] bg-[#F4A024]/10 text-[#F4A024]'
+                : 'border-gray-200 hover:border-gray-300 text-gray-700'
+            }`}
+          >
+            <Smartphone className="w-4 h-4" />
+            Mobile Money (MTN / Orange)
+          </button>
         </div>
       </div>
 
@@ -183,7 +215,7 @@ function OrderSummary({
       </Button>
 
       <p className="text-xs text-gray-500 text-center mt-4">
-        En cliquant sur "Commander", vous acceptez nos conditions generales
+        En cliquant sur &quot;Commander&quot;, vous acceptez nos conditions generales
       </p>
     </Card>
   )
@@ -219,6 +251,9 @@ function EmptyCart() {
 // MAIN PAGE COMPONENT
 // ============================================
 
+const CAMPAY_POLL_INTERVAL_MS = 2000
+const CAMPAY_TIMEOUT_MS = 5 * 60 * 1000
+
 export default function CartPage() {
   const router = useRouter()
   const {
@@ -230,33 +265,136 @@ export default function CartPage() {
     getDeliveryFee,
     getTotal,
     clearCart,
-    canCheckout
+    canCheckout,
+    orderType,
+    customerInfo,
   } = useCartStore()
   const [isCheckingOut, setIsCheckingOut] = useState(false)
   const [showSuccess, setShowSuccess] = useState(false)
+  const [paymentOption, setPaymentOption] = useState<PaymentOption>('on_delivery')
+  const [campayError, setCampayError] = useState<string | null>(null)
+  const [waitingMobileMoney, setWaitingMobileMoney] = useState(false)
 
   const subtotal = getSubtotal()
   const serviceFee = getServiceFee()
   const deliveryFee = getDeliveryFee()
   const total = getTotal()
 
+  const buildOrderPayload = (orderId?: string) => ({
+    ...(orderId ? { id: orderId } : {}),
+    type: orderType,
+    customerName: customerInfo?.name ?? '',
+    customerPhone: customerInfo?.phone ?? '',
+    customerEmail: customerInfo?.email,
+    deliveryFee: deliveryFee || undefined,
+    serviceFee: serviceFee || undefined,
+    subtotal,
+    total,
+    items: items.map((it) => ({
+      menuItemId: Number(it.menuItemId),
+      name: it.name,
+      price: it.price,
+      quantity: it.quantity,
+      addons: it.addons,
+    })),
+  })
+
   const handleCheckout = async () => {
     if (!canCheckout()) return
-
+    setCampayError(null)
     setIsCheckingOut(true)
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 2000))
+    try {
+      if (paymentOption === 'on_delivery') {
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(buildOrderPayload()),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          throw new Error((data.error as string) ?? 'Création de la commande impossible')
+        }
+        clearCart()
+        setIsCheckingOut(false)
+        setShowSuccess(true)
+        setTimeout(() => router.push('/menu'), 2000)
+        return
+      }
 
-    // Clear cart and show success
-    clearCart()
-    setIsCheckingOut(false)
-    setShowSuccess(true)
+      if (paymentOption === 'mobile_money') {
+        const externalReference = crypto.randomUUID()
+        const collectRes = await fetch('/api/campay/collect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            amount: total,
+            phone: customerInfo?.phone ?? '',
+            description: 'Commande Mess des Officiers',
+            external_reference: externalReference,
+          }),
+        })
+        if (!collectRes.ok) {
+          const data = await collectRes.json().catch(() => ({}))
+          throw new Error((data.error as string) ?? 'Demande de paiement impossible')
+        }
+        const { reference } = (await collectRes.json()) as { reference: string }
+        setWaitingMobileMoney(true)
+        setIsCheckingOut(false)
 
-    // Redirect after 2 seconds
-    setTimeout(() => {
-      router.push('/menu')
-    }, 2000)
+        const startTime = Date.now()
+        const pollStatus = async (): Promise<void> => {
+          if (Date.now() - startTime > CAMPAY_TIMEOUT_MS) {
+            setWaitingMobileMoney(false)
+            setCampayError('Demande expirée. Réessayez ou payez à la livraison.')
+            return
+          }
+          const statusRes = await fetch(`/api/campay/transaction/${encodeURIComponent(reference)}`)
+          if (!statusRes.ok) {
+            setTimeout(pollStatus, CAMPAY_POLL_INTERVAL_MS)
+            return
+          }
+          const statusData = (await statusRes.json()) as { status: string }
+          if (statusData.status === 'SUCCESSFUL') {
+            setWaitingMobileMoney(false)
+            setIsCheckingOut(true)
+            const orderRes = await fetch('/api/orders', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(buildOrderPayload(externalReference)),
+            })
+            if (!orderRes.ok) {
+              const data = await orderRes.json().catch(() => ({}))
+              setCampayError((data.error as string) ?? 'Commande non enregistrée')
+              return
+            }
+            const patchRes = await fetch(`/api/orders/${externalReference}/payment`, {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ paymentMethod: 'mobile', paidAt: new Date().toISOString() }),
+            })
+            if (!patchRes.ok) {
+              setCampayError('Paiement enregistré mais mise à jour facture en erreur.')
+            }
+            clearCart()
+            setShowSuccess(true)
+            setTimeout(() => router.push('/menu'), 2000)
+            return
+          }
+          if (statusData.status === 'FAILED') {
+            setWaitingMobileMoney(false)
+            setCampayError('Paiement refusé ou annulé. Réessayez ou payez à la livraison.')
+            return
+          }
+          setTimeout(pollStatus, CAMPAY_POLL_INTERVAL_MS)
+        }
+        pollStatus()
+      }
+    } catch (err) {
+      setIsCheckingOut(false)
+      setWaitingMobileMoney(false)
+      setCampayError(err instanceof Error ? err.message : 'Une erreur est survenue')
+    }
   }
 
   if (showSuccess) {
@@ -337,11 +475,25 @@ export default function CartPage() {
           {/* Order Summary - Sticky sur mobile en bas */}
           <div className="lg:col-span-1">
             <div className="lg:sticky lg:top-[100px]">
+              {campayError && (
+                <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-start gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-red-800">{campayError}</p>
+                </div>
+              )}
+              {waitingMobileMoney && (
+                <div className="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg text-center">
+                  <div className="w-10 h-10 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3" />
+                  <p className="text-sm font-medium text-blue-900">Acceptez la demande sur votre téléphone</p>
+                  <p className="text-xs text-blue-700 mt-1">MTN Money ou Orange Money</p>
+                </div>
+              )}
               <OrderSummary
                 subtotal={subtotal}
-                serviceFee={serviceFee}
                 deliveryFee={deliveryFee}
                 total={total}
+                paymentOption={paymentOption}
+                onPaymentOptionChange={setPaymentOption}
                 onCheckout={handleCheckout}
                 isLoading={isCheckingOut}
                 canCheckout={canCheckout()}
@@ -356,8 +508,7 @@ export default function CartPage() {
           <div className="text-sm sm:text-base text-blue-800">
             <p className="font-semibold mb-1">Information importante</p>
             <p>
-              Les frais de service sont calcules automatiquement. Votre commande sera preparee
-              et servie a votre table dans les meilleurs delais.
+            Votre commande sera preparee et servie a votre table ou remise dans les meilleurs delais.
             </p>
           </div>
         </div>

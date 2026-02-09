@@ -18,6 +18,8 @@ export interface MenuItem {
   available: boolean
   popular?: boolean
   preparationTime?: number // in minutes
+  /** Allergens (e.g. Gluten, Lactose). Used for filtering. */
+  allergens?: string[]
 }
 
 export interface Category {
