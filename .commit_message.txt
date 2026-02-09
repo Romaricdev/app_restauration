@@ -1,25 +1,11 @@
-feat(campay,auth,orders,tests): intégration Campay, correctifs TS, doc et tests
+feat(dashboard-orders): masquer ID, filtre période personnalisé, retrait stat Livraison
 
-Campay (Mobile Money MTN/Orange)
-- Client Campay: endpoint statut transaction /api/transaction/{ref}/ (pas utilities/transaction)
-- Route GET statut: 404/not found → 200 + status PENDING pour ne pas bloquer le polling
-- Réponses API: lecture res.text() + JSON.parse pour robustesse
-- Doc: docs/CAMPAY_INTEGRATION.md (procédure, flux, bonnes pratiques)
-- README: lien vers la doc Campay
+Interface commandes (dashboard admin)
+- Ne plus afficher l'ID de la commande : vue carte (titre = client ou Table X), vue liste (colonne ID supprimée), modal détail (titre "Détails de la commande", description = date/heure)
+- Filtre période : intervalle choisi par l'utilisateur (champs Du / Au type date), bouton Effacer ; plus de select prédéfinis (Aujourd'hui, Cette semaine, etc.)
+- Retrait de la carte stat "Livraison" ; grille stats en 4 colonnes (Total, Actives, Sur place, À emporter)
 
-API commandes
-- POST /api/orders: validation body, mapping items (menuItemId, name, price, quantity, addons)
-- PATCH /api/orders/[id]/payment: mise à jour paiement après Campay SUCCESSFUL
-
-Correctifs TypeScript
-- api/orders/route.ts: name typé string (rawName + typeof narrow) pour éviter {} assignable to string
-- auth-store: utilisation de adminRow au lieu de admin dans le return (admin possibly null)
-- auth-store: typage profileError (code, message) pour signup
-
-Tests
-- vitest + jsdom ajoutés en devDependencies pour vitest.config.ts
-- Config: environment jsdom, include src/**/*.test|spec, coverage store/lib/utils/validations
-- Tests: auth-store, cart-store, lib/utils (et validations si présents)
-
-Autres
-- Évolutions auth, POS, dashboard, composants et stores (travaux en cours)
+Fichiers modifiés
+- src/app/dashboard/orders/page.tsx : OrderCard titre, periodStart/periodEnd, periodRange useMemo, inputs date Du/Au, suppression carte Livraison
+- src/components/tables/order-columns.tsx : suppression colonne ID
+- src/components/modals/OrderDetailsModal.tsx : title + description sans order.id

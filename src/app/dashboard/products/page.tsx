@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useCallback, memo } from 'react'
 import { Card, CardContent, Button, Badge, SkeletonCard, EmptyState, Select, ViewToggle, DataTable } from '@/components/ui'
 import type { ViewMode } from '@/components/ui/view-toggle'
 import { useMenuItems, useCategories } from '@/hooks'
@@ -30,7 +30,7 @@ interface ProductCardProps {
   onDelete?: (product: MenuItem) => void
 }
 
-function ProductCard({ product, categoryName, onEdit, onToggleAvailable, onDelete }: ProductCardProps) {
+const ProductCard = memo(function ProductCard({ product, categoryName, onEdit, onToggleAvailable, onDelete }: ProductCardProps) {
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
     onToggleAvailable?.(product)
@@ -139,7 +139,7 @@ function ProductCard({ product, categoryName, onEdit, onToggleAvailable, onDelet
       </CardContent>
     </Card>
   )
-}
+})
 
 // ============================================
 // MAIN PAGE COMPONENT
@@ -158,9 +158,10 @@ export default function ProductsPage() {
 
   const isLoading = menuLoading || categoriesLoading
 
-  const getCategoryName = (categoryId: string) => {
-    return categories.find((cat) => cat.id === categoryId)?.name || categoryId
-  }
+  const getCategoryName = useCallback(
+    (categoryId: string) => categories.find((cat) => cat.id === categoryId)?.name || categoryId,
+    [categories]
+  )
 
   let filteredProducts = menuItems
   if (categoryFilter !== 'all') {
@@ -190,10 +191,10 @@ export default function ProductsPage() {
     { value: 'unavailable', label: `Indisponibles (${stats.unavailable})` },
   ]
 
-  const handleEdit = (product: MenuItem) => {
+  const handleEdit = useCallback((product: MenuItem) => {
     setEditingProduct(product)
     setIsFormModalOpen(true)
-  }
+  }, [])
 
   const handleToggleAvailable = useCallback(
     async (product: MenuItem) => {
@@ -231,10 +232,10 @@ export default function ProductsPage() {
     [refetchMenuItems, addToast]
   )
 
-  const handleAdd = () => {
+  const handleAdd = useCallback(() => {
     setEditingProduct(null)
     setIsFormModalOpen(true)
-  }
+  }, [])
 
   const handleFormSubmit = useCallback(
     async (data: Partial<MenuItem>) => {

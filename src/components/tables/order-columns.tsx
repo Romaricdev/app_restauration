@@ -34,15 +34,6 @@ export function getOrderColumns({
 }: OrderColumnsProps): ColumnDef<Order>[] {
   return [
     {
-      accessorKey: 'id',
-      header: 'ID',
-      cell: ({ row }) => (
-        <span className="font-mono text-sm text-gray-600">
-          {String(row.original.id)}
-        </span>
-      ),
-    },
-    {
       accessorKey: 'customerName',
       header: 'Client',
       cell: ({ row }) => {

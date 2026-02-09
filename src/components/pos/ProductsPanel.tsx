@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, memo } from 'react'
 import Image from 'next/image'
 import { cn, formatPrice } from '@/lib/utils'
 import { usePosStore } from '@/store/pos-store'
@@ -226,7 +226,7 @@ interface ProductCardProps {
   hasAddons?: boolean
 }
 
-function ProductCard({ product, onClick, badge, hasAddons }: ProductCardProps) {
+const ProductCard = memo(function ProductCard({ product, onClick, badge, hasAddons }: ProductCardProps) {
   const productImage =
     product.image ||
     'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&auto=format&fit=crop'
@@ -274,4 +274,4 @@ function ProductCard({ product, onClick, badge, hasAddons }: ProductCardProps) {
       </div>
     </button>
   )
-}
+})

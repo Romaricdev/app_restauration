@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useCartStore } from '@/store/cart-store'
@@ -275,10 +275,15 @@ export default function CartPage() {
   const [campayError, setCampayError] = useState<string | null>(null)
   const [waitingMobileMoney, setWaitingMobileMoney] = useState(false)
 
-  const subtotal = getSubtotal()
-  const serviceFee = getServiceFee()
-  const deliveryFee = getDeliveryFee()
-  const total = getTotal()
+  const { subtotal, serviceFee, deliveryFee, total } = useMemo(
+    () => ({
+      subtotal: getSubtotal(),
+      serviceFee: getServiceFee(),
+      deliveryFee: getDeliveryFee(),
+      total: getTotal(),
+    }),
+    [items, orderType, getSubtotal, getServiceFee, getDeliveryFee, getTotal]
+  )
 
   const buildOrderPayload = (orderId?: string) => ({
     ...(orderId ? { id: orderId } : {}),

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, memo } from 'react'
 import { X, Receipt, Printer, Calendar, DollarSign, Loader2, WifiOff, RefreshCw } from 'lucide-react'
 import { formatPrice } from '@/lib/utils'
 import { Button } from '@/components/ui'
@@ -293,7 +293,7 @@ interface PaidOrderCardProps {
   onPrintInvoice: () => void
 }
 
-function PaidOrderCard({ order, onViewInvoice, onPrintInvoice }: PaidOrderCardProps) {
+const PaidOrderCard = memo(function PaidOrderCard({ order, onViewInvoice, onPrintInvoice }: PaidOrderCardProps) {
   const paymentMethodLabels: Record<string, string> = {
     cash: 'Cash',
     mobile: 'Mobile Money',
@@ -368,4 +368,4 @@ function PaidOrderCard({ order, onViewInvoice, onPrintInvoice }: PaidOrderCardPr
       </div>
     </div>
   )
-}
+})

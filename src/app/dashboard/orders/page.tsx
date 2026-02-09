@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useMemo } from 'react'
-import { Card, CardContent, Button, Badge, SkeletonCard, EmptyState, Select, ViewToggle, DataTable } from '@/components/ui'
+import { useState, useMemo, useCallback, memo } from 'react'
+import { Card, CardContent, Button, Badge, SkeletonCard, EmptyState, Select, ViewToggle, DataTable, Input } from '@/components/ui'
 import type { ViewMode } from '@/components/ui/view-toggle'
 import { OrderDetailsModal } from '@/components/modals'
 import { OrderStatusModal } from '@/components/modals/forms'
@@ -9,6 +9,7 @@ import { getOrderColumns } from '@/components/tables'
 import { useOrders, useMenuItems } from '@/hooks'
 import { Eye, ShoppingBag, UtensilsCrossed, Package } from 'lucide-react'
 import { formatPrice, formatDate } from '@/lib/utils'
+import { startOfDay, endOfDay, isWithinInterval } from 'date-fns'
 import Image from 'next/image'
 import type { Order, OrderType, OrderStatus } from '@/types'
 import { updateOrderStatus } from '@/lib/data'
@@ -24,7 +25,7 @@ interface OrderCardProps {
   getProductById?: (id: number | string) => { image?: string } | undefined
 }
 
-function OrderCard({ order, onViewDetail, getProductById }: OrderCardProps) {
+const OrderCard = memo(function OrderCard({ order, onViewDetail, getProductById }: OrderCardProps) {
   const statusConfig = {
     pending: { label: 'En attente', variant: 'warning' as const },
     confirmed: { label: 'Confirmée', variant: 'info' as const },
@@ -76,7 +77,7 @@ function OrderCard({ order, onViewDetail, getProductById }: OrderCardProps) {
             <div className="mb-3">
               <div className="flex items-center gap-2 mb-1">
                 <h3 className="font-semibold text-gray-900">
-                  {order.id}
+                  {order.customerName || (order.tableNumber ? `Table ${order.tableNumber}` : 'Commande')}
                 </h3>
                 <Badge variant={status.variant} size="sm">
                   {status.label}
@@ -143,7 +144,7 @@ function OrderCard({ order, onViewDetail, getProductById }: OrderCardProps) {
       </CardContent>
     </Card>
   )
-}
+})
 
 // ============================================
 // MAIN PAGE COMPONENT
@@ -156,12 +157,27 @@ export default function OrdersPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [typeFilter, setTypeFilter] = useState<string>('all')
+  const [periodStart, setPeriodStart] = useState<string>('')
+  const [periodEnd, setPeriodEnd] = useState<string>('')
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
 
-  const getProductById = (id: number | string) => menuItems.find((p) => p.id === id)
+  const getProductById = useCallback(
+    (id: number | string) => menuItems.find((p) => p.id === id),
+    [menuItems]
+  )
   const isLoading = ordersLoading
+
+  const periodRange = useMemo(() => {
+    if (!periodStart && !periodEnd) return null
+    const start = periodStart ? startOfDay(new Date(periodStart)) : null
+    const end = periodEnd ? endOfDay(new Date(periodEnd)) : null
+    if (start && end) return { start, end }
+    if (start) return { start, end: endOfDay(new Date(periodStart)) }
+    if (end) return { start: startOfDay(new Date(periodEnd)), end }
+    return null
+  }, [periodStart, periodEnd])
 
   let filteredOrders = orders
   if (statusFilter !== 'all') {
@@ -169,6 +185,12 @@ export default function OrdersPage() {
   }
   if (typeFilter !== 'all') {
     filteredOrders = filteredOrders.filter((o) => o.type === typeFilter)
+  }
+  if (periodRange) {
+    filteredOrders = filteredOrders.filter((o) => {
+      const orderDate = new Date(o.createdAt)
+      return isWithinInterval(orderDate, { start: periodRange.start, end: periodRange.end })
+    })
   }
 
   const stats = {
@@ -197,15 +219,15 @@ export default function OrdersPage() {
     { value: 'cancelled', label: 'Annulées' },
   ]
 
-  const handleViewDetail = (order: Order) => {
+  const handleViewDetail = useCallback((order: Order) => {
     setSelectedOrder(order)
     setIsModalOpen(true)
-  }
+  }, [])
 
-  const handleUpdateStatus = (order: Order) => {
+  const handleUpdateStatus = useCallback((order: Order) => {
     setSelectedOrder(order)
     setIsStatusModalOpen(true)
-  }
+  }, [])
 
   const handleStatusChange = async (orderId: string | number, newStatus: OrderStatus) => {
     try {
@@ -228,7 +250,7 @@ export default function OrdersPage() {
         onView: handleViewDetail,
         onUpdateStatus: handleUpdateStatus,
       }),
-    []
+    [handleViewDetail, handleUpdateStatus]
   )
 
   return (
@@ -244,7 +266,7 @@ export default function OrdersPage() {
       </div>
 
       {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card variant="dashboard" padding="md">
           <CardContent className="p-0">
             <div className="flex items-center justify-between">
@@ -301,24 +323,51 @@ export default function OrdersPage() {
           </CardContent>
         </Card>
 
-        <Card variant="dashboard" padding="md">
-          <CardContent className="p-0">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs text-gray-500 mb-1">Livraison</p>
-                <p className="text-2xl font-bold text-purple-600">{stats.delivery}</p>
-              </div>
-              <div className="w-10 h-10 rounded-lg bg-purple-50 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5 text-purple-600" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Filters and View Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row gap-3 flex-wrap items-start sm:items-center">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 flex-wrap items-start sm:items-center">
+            <div className="flex items-center gap-2">
+              <label htmlFor="period-start" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                Du
+              </label>
+              <Input
+                id="period-start"
+                type="date"
+                value={periodStart}
+                onChange={(e) => setPeriodStart(e.target.value)}
+                className="w-full sm:w-40"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <label htmlFor="period-end" className="text-sm font-medium text-gray-700 whitespace-nowrap">
+                Au
+              </label>
+              <Input
+                id="period-end"
+                type="date"
+                value={periodEnd}
+                onChange={(e) => setPeriodEnd(e.target.value)}
+                className="w-full sm:w-40"
+                min={periodStart || undefined}
+              />
+            </div>
+            {(periodStart || periodEnd) && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setPeriodStart('')
+                  setPeriodEnd('')
+                }}
+                className="text-gray-500"
+              >
+                Effacer
+              </Button>
+            )}
+          </div>
           <div className="w-full sm:w-48">
             <Select
               value={typeFilter}

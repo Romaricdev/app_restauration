@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, memo } from 'react'
 import { Clock, UtensilsCrossed, ShoppingBag, Truck, ChefHat, CheckCircle, CreditCard, Printer, Plus, User, Phone, AlertTriangle, Trash2, XCircle } from 'lucide-react'
 import { cn, formatPrice } from '@/lib/utils'
 import { Button, Input } from '@/components/ui'
@@ -58,7 +58,7 @@ const orderTypeConfig = {
   },
 }
 
-export function ActiveOrderCard({ order, onUpdateStatus, onServe, onPaymentComplete }: ActiveOrderCardProps) {
+export const ActiveOrderCard = memo(function ActiveOrderCard({ order, onUpdateStatus, onServe, onPaymentComplete }: ActiveOrderCardProps) {
   const [paymentModalOpen, setPaymentModalOpen] = useState(false)
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false)
   const [preliminaryInvoiceModalOpen, setPreliminaryInvoiceModalOpen] = useState(false)
@@ -577,4 +577,4 @@ export function ActiveOrderCard({ order, onUpdateStatus, onServe, onPaymentCompl
       </BaseModal>
     </div>
   )
-}
+})

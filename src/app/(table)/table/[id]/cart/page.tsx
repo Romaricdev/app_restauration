@@ -1,6 +1,6 @@
 'use client'
 
-import { use, useState, useEffect } from 'react'
+import { use, useState, useEffect, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useCartStore } from '@/store/cart-store'
@@ -259,9 +259,14 @@ export default function TableCartPage({ params }: TableCartPageProps) {
     }
   }, [tableNumber, cartTableNumber])
 
-  const subtotal = getSubtotal()
-  const serviceFee = getServiceFee()
-  const total = getTotal()
+  const { subtotal, serviceFee, total } = useMemo(
+    () => ({
+      subtotal: getSubtotal(),
+      serviceFee: getServiceFee(),
+      total: getTotal(),
+    }),
+    [items, getSubtotal, getServiceFee, getTotal]
+  )
 
   const handleConfirm = async () => {
     if (items.length === 0) return

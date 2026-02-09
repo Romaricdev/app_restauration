@@ -56,8 +56,14 @@ export function OrderDetailsModal({
     <BaseModal
       open={open}
       onOpenChange={onOpenChange}
-      title={`Commande ${order.id}`}
-      description={`Détails de la commande`}
+      title="Détails de la commande"
+      description={formatDate(order.createdAt, {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })}
       maxWidth="lg"
     >
       <div className="space-y-6">

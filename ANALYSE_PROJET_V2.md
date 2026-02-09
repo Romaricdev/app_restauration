@@ -658,19 +658,19 @@ export function useDashboardStats() // ⚠️ Stats partielles
 **Objectif :** Rendre le code production-ready
 
 ```
-☑ Ajouter Error Boundary racine
+✅ Ajouter Error Boundary racine
   → src/components/ErrorBoundary.tsx
   → Wrapper dans app/layout.tsx
 
-☑ Corriger tous les `as any`
+✅ Corriger tous les `as any`
   → src/store/auth-store.ts (8 occurrences)
   → Typer correctement Supabase client
 
-☑ Sécuriser generateId()
+✅ Sécuriser generateId()
   → src/lib/utils.ts:51-53
   → Remplacer Math.random() par crypto.randomUUID()
 
-☑ Ajouter validation Zod
+✅ Ajouter validation Zod
   → Formulaires login, register, reservation
   → Créer schemas dans src/lib/validations/
 
@@ -690,7 +690,7 @@ export function useDashboardStats() // ⚠️ Stats partielles
 **Objectif :** Compléter les parcours utilisateur
 
 ```
-□ Finaliser QR Tables
+✅ Finaliser QR Tables
   → /table/[id]/menu - Afficher menu réel
   → /table/[id]/cart - Connecter avec tableNumber
   → Bouton "Appeler serveur"
@@ -699,7 +699,7 @@ export function useDashboardStats() // ⚠️ Stats partielles
   → src/app/(public)/reservation/page.tsx:228
   → Appeler createHallReservation
 
-□ Intégrer paiement
+✅Intégrer paiement
   → Choisir provider (Stripe, Flutterwave, MTN Money)
   → Route API /api/checkout
   → Webhook confirmation
@@ -716,17 +716,17 @@ export function useDashboardStats() // ⚠️ Stats partielles
 **Objectif :** Optimiser l'expérience
 
 ```
-□ Memoization React
-  → React.memo sur ProductCard, OrderCard, etc.
-  → useMemo pour calculs lourds (getSubtotal)
-  → useCallback pour handlers stables
+✅ Memoization React (implémenté)
+  → React.memo sur ProductCard (dashboard + POS), OrderCard, PaidOrderCard, ActiveOrderCard
+  → useMemo pour totaux panier (getSubtotal/getTotal) — cart public + table
+  → useCallback pour handlers stables (handleViewDetail, handleEdit, getProductById, etc.)
 
 □ Refactoriser PosStore
   → Extraire tableStore (gestion tables)
   → Extraire kitchenStore (cuisine)
   → Extraire paymentStore (paiement/factures)
 
-□ Persistence panier
+✅ Persistence panier
   → Sauvegarder dans localStorage
   → Restaurer à l'ouverture
   → Expiration après X heures
