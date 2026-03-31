@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { RestaurantTable } from '@/types'
+import { assertPermission } from './permission-guard'
 
 interface DbTable {
   id: number
@@ -12,6 +13,9 @@ interface DbTable {
   created_at: string
   updated_at: string
 }
+
+const TABLE_COLUMNS =
+  'id, number, capacity, status, current_order_id, current_party_size, qr_slug, created_at, updated_at'
 
 function mapTable(row: DbTable): RestaurantTable {
   return {
@@ -27,7 +31,7 @@ function mapTable(row: DbTable): RestaurantTable {
 export async function fetchTables(): Promise<RestaurantTable[]> {
   const { data, error } = await supabase
     .from('restaurant_tables')
-    .select('*')
+    .select(TABLE_COLUMNS)
     .order('number', { ascending: true })
 
   if (error) throw error
@@ -39,7 +43,7 @@ export async function fetchTablesByStatus(
 ): Promise<RestaurantTable[]> {
   const { data, error } = await supabase
     .from('restaurant_tables')
-    .select('*')
+    .select(TABLE_COLUMNS)
     .eq('status', status)
     .order('number', { ascending: true })
 
@@ -52,7 +56,7 @@ export async function fetchTableById(
 ): Promise<RestaurantTable | null> {
   const { data, error } = await supabase
     .from('restaurant_tables')
-    .select('*')
+    .select(TABLE_COLUMNS)
     .eq('id', id)
     .maybeSingle()
 
@@ -66,7 +70,7 @@ export async function fetchTableByNumber(
 ): Promise<RestaurantTable | null> {
   const { data, error } = await supabase
     .from('restaurant_tables')
-    .select('*')
+    .select(TABLE_COLUMNS)
     .eq('number', tableNumber)
     .maybeSingle()
 
@@ -86,6 +90,7 @@ export type CreateTableInput = {
 export type UpdateTableInput = Partial<CreateTableInput>
 
 export async function createTable(input: CreateTableInput): Promise<RestaurantTable> {
+  await assertPermission('tables.create')
   const row = {
     number: input.number,
     capacity: input.capacity,
@@ -93,7 +98,7 @@ export async function createTable(input: CreateTableInput): Promise<RestaurantTa
   }
   const { data, error } = await (supabase.from('restaurant_tables') as any)
     .insert(row)
-    .select()
+    .select(TABLE_COLUMNS)
     .single()
   if (error) throw error
   return mapTable(data as DbTable)
@@ -103,6 +108,7 @@ export async function updateTable(
   id: number | string,
   input: UpdateTableInput
 ): Promise<RestaurantTable> {
+  await assertPermission('tables.update')
   const payload: Record<string, unknown> = {}
   if (input.number != null) payload.number = input.number
   if (input.capacity != null) payload.capacity = input.capacity
@@ -110,13 +116,14 @@ export async function updateTable(
   const { data, error } = await (supabase.from('restaurant_tables') as any)
     .update(payload)
     .eq('id', id)
-    .select()
+    .select(TABLE_COLUMNS)
     .single()
   if (error) throw error
   return mapTable(data as DbTable)
 }
 
 export async function deleteTable(id: number | string): Promise<void> {
+  await assertPermission('tables.delete')
   const { error } = await supabase.from('restaurant_tables').delete().eq('id', id)
   if (error) throw error
 }
@@ -134,6 +141,7 @@ export async function updateTableStatus(
   currentOrderId?: string | null,
   options?: UpdateTableStatusOptions
 ): Promise<RestaurantTable> {
+  await assertPermission('tables.update')
   const payload: Record<string, unknown> = { status }
   if (currentOrderId !== undefined) {
     payload.current_order_id = currentOrderId
@@ -144,7 +152,7 @@ export async function updateTableStatus(
   const { data, error } = await (supabase.from('restaurant_tables') as any)
     .update(payload)
     .eq('id', id)
-    .select()
+    .select(TABLE_COLUMNS)
     .single()
   if (error) throw error
   return mapTable(data as DbTable)
@@ -157,8 +165,7 @@ export async function updateTableStatusByNumber(
   currentOrderId?: string | null,
   options?: UpdateTableStatusOptions
 ): Promise<RestaurantTable | null> {
-  const table = await fetchTables()
-  const targetTable = table.find((t) => t.number === tableNumber)
+  const targetTable = await fetchTableByNumber(tableNumber)
   if (!targetTable) return null
   return updateTableStatus(targetTable.id, status, currentOrderId, options)
 }

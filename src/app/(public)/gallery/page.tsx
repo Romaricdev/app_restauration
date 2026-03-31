@@ -89,7 +89,7 @@ function GalleryHero() {
         </FadeIn>
         <FadeIn delay={0.2} direction="up">
           <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed text-justify">
-            Découvrez l&apos;ambiance, les plats et les événements du Mess des Officiers à travers notre galerie.
+            Découvrez l&apos;ambiance, les plats et les événements du Restaurant Central à travers notre galerie.
           </p>
         </FadeIn>
       </div>

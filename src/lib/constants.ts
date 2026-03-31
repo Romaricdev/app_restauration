@@ -2,7 +2,7 @@
 // Application Constants
 // ============================================
 
-export const APP_NAME = 'Mess des Officiers'
+export const APP_NAME = 'Restaurant Central'
 export const APP_DESCRIPTION = 'Système de gestion de restaurant'
 
 // ============================================
@@ -122,7 +122,7 @@ export const TIME_SLOTS = [
 // ============================================
 
 export const RESTAURANT_INFO = {
-  name: 'Mess des Officiers',
+  name: 'Restaurant Central',
   address: 'Quartier Général, Yaoundé',
   phone: '+237 6XX XXX XXX',
   email: 'contact@messofficiers.cm',

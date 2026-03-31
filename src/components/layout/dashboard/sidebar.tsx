@@ -22,26 +22,32 @@ import {
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useUIStore } from '@/store'
+import { useAuth } from '@/hooks/useAuth'
+import { emitDashboardNavigationStart } from '@/lib/network/activity'
 
 const navItems = [
-  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'POS', href: '/dashboard/pos', icon: Monitor, highlight: true },
-  { label: 'Tables', href: '/dashboard/tables', icon: UtensilsCrossed },
-  { label: 'Salles', href: '/dashboard/halls', icon: Building2 },
-  { label: 'Réservation salles', href: '/dashboard/reservation-halls', icon: Receipt },
-  { label: 'Réservations', href: '/dashboard/reservations', icon: Calendar },
-  { label: 'Commandes', href: '/dashboard/orders', icon: ShoppingBag },
-  { label: 'Menus', href: '/dashboard/menus', icon: ChefHat },
-  { label: 'Produits', href: '/dashboard/products', icon: Package },
-  { label: 'Catégories', href: '/dashboard/categories', icon: Grid3X3 },
-  { label: 'Addons', href: '/dashboard/addons', icon: Layers },
-  { label: 'Paramètres', href: '/dashboard/settings', icon: Settings },
-  { label: 'Aide utilisateur', href: '/dashboard/help', icon: HelpCircle },
+  { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard, permission: 'dashboard.read' },
+  { label: 'POS', href: '/dashboard/pos', icon: Monitor, highlight: true, permission: 'pos.read' },
+  { label: 'Tables', href: '/dashboard/tables', icon: UtensilsCrossed, permission: 'tables.read' },
+  { label: 'Salles', href: '/dashboard/halls', icon: Building2, permission: 'halls.read' },
+  { label: 'Réservation salles', href: '/dashboard/reservation-halls', icon: Receipt, permission: 'reservation_halls.read' },
+  { label: 'Réservations', href: '/dashboard/reservations', icon: Calendar, permission: 'reservations.read' },
+  { label: 'Commandes', href: '/dashboard/orders', icon: ShoppingBag, permission: 'orders.read' },
+  { label: 'Menus', href: '/dashboard/menus', icon: ChefHat, permission: 'menus.read' },
+  { label: 'Produits', href: '/dashboard/products', icon: Package, permission: 'products.read' },
+  { label: 'Catégories', href: '/dashboard/categories', icon: Grid3X3, permission: 'categories.read' },
+  { label: 'Addons', href: '/dashboard/addons', icon: Layers, permission: 'addons.read' },
+  { label: 'Paramètres', href: '/dashboard/settings', icon: Settings, permission: 'settings.read' },
+  { label: 'Utilisateurs', href: '/dashboard/users', icon: Users, permission: 'admins.read' },
+  { label: 'Rôles & Permissions', href: '/dashboard/roles', icon: Users, permission: 'roles.read' },
+  { label: 'Aide utilisateur', href: '/dashboard/help', icon: HelpCircle, permission: 'help.read' },
 ]
 
 export function DashboardSidebar() {
   const pathname = usePathname()
   const { sidebarOpen, setSidebarOpen } = useUIStore()
+  const { hasPermission } = useAuth()
+  const visibleItems = navItems.filter((item) => hasPermission(item.permission))
 
   return (
     <>
@@ -67,7 +73,7 @@ export function DashboardSidebar() {
               <ChefHat className="w-5 h-5 text-white" />
             </div>
             <span className="font-semibold text-dashboard-text-primary">
-              Mess Admin
+              Plateforme Admin
             </span>
           </Link>
           <button 
@@ -81,7 +87,7 @@ export function DashboardSidebar() {
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-4 px-3">
           <ul className="space-y-1">
-            {navItems.map((item) => {
+            {visibleItems.map((item) => {
               const isActive = pathname === item.href ||
                 (item.href !== '/dashboard' && pathname.startsWith(item.href))
               const Icon = item.icon
@@ -99,7 +105,10 @@ export function DashboardSidebar() {
                           ? 'bg-dashboard-primary/10 text-dashboard-primary hover:bg-dashboard-primary/20 font-medium'
                           : 'text-dashboard-text-secondary hover:bg-dashboard-surface-muted hover:text-dashboard-text-primary'
                     )}
-                    onClick={() => setSidebarOpen(false)}
+                    onClick={() => {
+                      if (!isActive) emitDashboardNavigationStart()
+                      setSidebarOpen(false)
+                    }}
                   >
                     <Icon className="w-[18px] h-[18px]" />
                     {item.label}
@@ -116,7 +125,7 @@ export function DashboardSidebar() {
         {/* Footer */}
         <div className="p-4 border-t border-dashboard-border">
           <div className="text-xs text-dashboard-text-muted text-center">
-            Mess des Officiers v1.0
+            Plateforme Admin v1.0
           </div>
         </div>
       </aside>

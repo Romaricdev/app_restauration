@@ -9,12 +9,14 @@ interface CategoryColumnsProps {
   onEdit: (category: Category) => void
   onToggleActive: (category: Category) => void
   isActive: (category: Category) => boolean
+  canUpdate: boolean
 }
 
 export function getCategoryColumns({
   onEdit,
   onToggleActive,
   isActive,
+  canUpdate,
 }: CategoryColumnsProps): ColumnDef<Category>[] {
   return [
     {
@@ -72,6 +74,7 @@ export function getCategoryColumns({
               size="icon-sm"
               onClick={() => onToggleActive(category)}
               title={active ? 'Désactiver' : 'Activer'}
+              disabled={!canUpdate}
             >
               {active ? (
                 <Eye className="h-4 w-4" />
@@ -84,6 +87,7 @@ export function getCategoryColumns({
               size="icon-sm"
               onClick={() => onEdit(category)}
               title="Modifier"
+              disabled={!canUpdate}
             >
               <Edit className="h-4 w-4" />
             </Button>

@@ -335,7 +335,7 @@ export default function CartPage() {
           body: JSON.stringify({
             amount: total,
             phone: customerInfo?.phone ?? '',
-            description: 'Commande Mess des Officiers',
+            description: 'Commande Restaurant Central',
             external_reference: externalReference,
           }),
         })

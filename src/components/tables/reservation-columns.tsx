@@ -17,12 +17,14 @@ interface ReservationColumnsProps {
   onView: (reservation: Reservation) => void
   onConfirm: (reservation: Reservation) => void
   onCancel: (reservation: Reservation) => void
+  canUpdate: boolean
 }
 
 export function getReservationColumns({
   onView,
   onConfirm,
   onCancel,
+  canUpdate,
 }: ReservationColumnsProps): ColumnDef<Reservation>[] {
   return [
     {
@@ -146,6 +148,7 @@ export function getReservationColumns({
                   size="icon-sm"
                   onClick={() => onConfirm(reservation)}
                   title="Confirmer"
+                  disabled={!canUpdate}
                 >
                   <Check className="h-4 w-4 text-green-600" />
                 </Button>
@@ -154,6 +157,7 @@ export function getReservationColumns({
                   size="icon-sm"
                   onClick={() => onCancel(reservation)}
                   title="Annuler"
+                  disabled={!canUpdate}
                 >
                   <X className="h-4 w-4 text-red-500" />
                 </Button>
@@ -165,6 +169,7 @@ export function getReservationColumns({
                 size="icon-sm"
                 onClick={() => onCancel(reservation)}
                 title="Annuler"
+                disabled={!canUpdate}
               >
                 <X className="h-4 w-4 text-red-500" />
               </Button>

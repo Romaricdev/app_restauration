@@ -10,6 +10,8 @@ interface ProductColumnsProps {
   onEdit: (product: MenuItem) => void
   onDelete: (product: MenuItem) => void
   onToggleAvailability: (product: MenuItem) => void
+  canUpdate: boolean
+  canDelete: boolean
 }
 
 export function getProductColumns({
@@ -17,6 +19,8 @@ export function getProductColumns({
   onEdit,
   onDelete,
   onToggleAvailability,
+  canUpdate,
+  canDelete,
 }: ProductColumnsProps): ColumnDef<MenuItem>[] {
   return [
     {
@@ -107,6 +111,7 @@ export function getProductColumns({
               size="icon-sm"
               onClick={() => onToggleAvailability(product)}
               title={product.available ? 'Désactiver' : 'Activer'}
+              disabled={!canUpdate}
             >
               {product.available ? (
                 <ToggleRight className="h-4 w-4 text-green-600" />
@@ -119,6 +124,7 @@ export function getProductColumns({
               size="icon-sm"
               onClick={() => onEdit(product)}
               title="Modifier"
+              disabled={!canUpdate}
             >
               <Edit className="h-4 w-4" />
             </Button>
@@ -127,6 +133,7 @@ export function getProductColumns({
               size="icon-sm"
               onClick={() => onDelete(product)}
               title="Supprimer"
+              disabled={!canDelete}
             >
               <Trash2 className="h-4 w-4 text-red-500" />
             </Button>

@@ -49,7 +49,7 @@ const sections = [
   {
     icon: FileText,
     title: '1. Acceptation des Conditions',
-    content: `En accédant et en utilisant le site web du Mess des Officiers, vous acceptez d'être lié par ces conditions générales d'utilisation. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre site.
+    content: `En accédant et en utilisant le site web du Restaurant Central, vous acceptez d'être lié par ces conditions générales d'utilisation. Si vous n'acceptez pas ces conditions, veuillez ne pas utiliser notre site.
 
 Ces conditions s'appliquent à tous les utilisateurs du site, y compris les visiteurs, les clients, et les membres.`,
   },
@@ -76,7 +76,7 @@ Ces conditions s'appliquent à tous les utilisateurs du site, y compris les visi
   {
     icon: Scale,
     title: '4. Propriété Intellectuelle',
-    content: `Tout le contenu de ce site, incluant mais sans s'y limiter : textes, graphiques, logos, images, et logiciels, est la propriété du Mess des Officiers et est protégé par les lois sur la propriété intellectuelle.
+    content: `Tout le contenu de ce site, incluant mais sans s'y limiter : textes, graphiques, logos, images, et logiciels, est la propriété du Restaurant Central et est protégé par les lois sur la propriété intellectuelle.
 
 Vous n'êtes pas autorisé à reproduire, distribuer, modifier ou créer des œuvres dérivées à partir de ce contenu sans notre autorisation écrite préalable.`,
   },

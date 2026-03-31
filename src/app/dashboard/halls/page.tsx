@@ -11,6 +11,8 @@ import { Plus, Edit, Eye, Building2, Users, Wrench } from 'lucide-react'
 import type { Hall } from '@/types'
 import { createHall, updateHall, deleteHall } from '@/lib/data'
 import { useUIStore } from '@/store'
+import { getDashboardActionErrorMessage } from '@/lib/errors/permission'
+import { useAuth } from '@/hooks/useAuth'
 
 // ============================================
 // HALL CARD COMPONENT
@@ -20,9 +22,10 @@ interface HallCardProps {
   hall: Hall
   onEdit?: (hall: Hall) => void
   onViewDetail?: (hall: Hall) => void
+  canUpdate: boolean
 }
 
-function HallCard({ hall, onEdit, onViewDetail }: HallCardProps) {
+function HallCard({ hall, onEdit, onViewDetail, canUpdate }: HallCardProps) {
   const statusConfig = {
     available: { label: 'Disponible', variant: 'success' as const },
     occupied: { label: 'Occupée', variant: 'error' as const },
@@ -98,6 +101,7 @@ function HallCard({ hall, onEdit, onViewDetail }: HallCardProps) {
                 onEdit?.(hall)
               }}
               title="Modifier"
+              disabled={!canUpdate}
             >
               <Edit className="w-4 h-4" />
             </Button>
@@ -115,6 +119,10 @@ function HallCard({ hall, onEdit, onViewDetail }: HallCardProps) {
 export default function HallsPage() {
   const { data: halls, loading: dataLoading, refetch: refetchHalls } = useHalls()
   const addToast = useUIStore((s) => s.addToast)
+  const { hasPermission } = useAuth()
+  const canCreate = hasPermission('halls.create')
+  const canUpdate = hasPermission('halls.update')
+  const canDelete = hasPermission('halls.delete')
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedHall, setSelectedHall] = useState<Hall | null>(null)
@@ -158,7 +166,7 @@ export default function HallsPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de la suppression.',
+          message: getDashboardActionErrorMessage(e, 'Erreur lors de la suppression.'),
         })
       }
     },
@@ -209,7 +217,7 @@ export default function HallsPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de l\'enregistrement.',
+          message: getDashboardActionErrorMessage(e, "Erreur lors de l'enregistrement."),
         })
       }
     },
@@ -221,8 +229,10 @@ export default function HallsPage() {
       getHallColumns({
         onEdit: handleEdit,
         onDelete: handleDelete,
+        canUpdate,
+        canDelete,
       }),
-    [handleDelete]
+    [handleDelete, canUpdate, canDelete]
   )
 
   return (
@@ -237,7 +247,7 @@ export default function HallsPage() {
             Gérez les salles de fête et leurs réservations
           </p>
         </div>
-        <Button variant="primary" onClick={handleAdd} className="gap-2">
+        <Button variant="primary" onClick={handleAdd} className="gap-2" disabled={!canCreate}>
           <Plus className="w-4 h-4" />
           Ajouter une salle
         </Button>
@@ -330,6 +340,7 @@ export default function HallsPage() {
                 hall={hall}
                 onEdit={handleEdit}
                 onViewDetail={handleViewDetail}
+              canUpdate={canUpdate}
               />
             </div>
           ))}
@@ -347,7 +358,8 @@ export default function HallsPage() {
               description="Aucune salle trouvée avec ce filtre"
               action={{
                 label: 'Ajouter une salle',
-                onClick: handleAdd
+                onClick: handleAdd,
+                disabled: !canCreate,
               }}
             />
           </CardContent>

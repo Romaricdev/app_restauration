@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import { setInvoicesCache } from '@/lib/cache/invoices-cache'
+import { assertPermission } from './permission-guard'
 import type {
   Order,
   OrderItem,
@@ -158,6 +159,7 @@ export async function updateOrderStatus(
   orderId: string,
   status: OrderStatus
 ): Promise<void> {
+  await assertPermission('orders.update')
   const { error } = await (supabase.from('orders') as any)
     .update({ status })
     .eq('id', orderId)
@@ -169,6 +171,7 @@ const CUSTOMER_PLACEHOLDER_PHONE = '—'
 
 /** Crée une commande POS en base (order + order_items + order_item_addons). */
 export async function createOrderFromPos(input: CreateOrderFromPosInput): Promise<void> {
+  await assertPermission('orders.create')
   const customerName = (input.customerName || '').trim() || CUSTOMER_PLACEHOLDER_NAME
   const customerPhone = (input.customerPhone || '').trim() || CUSTOMER_PLACEHOLDER_PHONE
   const validatedAt = input.validatedAt && input.validatedAt.length > 0
@@ -293,6 +296,7 @@ export async function updateOrderKitchenStatus(
   orderId: string,
   kitchenStatus: KitchenOrderStatus
 ): Promise<void> {
+  await assertPermission('orders.update')
   const payload: Record<string, unknown> = { kitchen_status: kitchenStatus }
   if (kitchenStatus === 'served') {
     payload.served_at = new Date().toISOString()
@@ -363,6 +367,7 @@ export async function updateOrderPayment(
   orderId: string,
   payment: UpdateOrderPaymentInput
 ): Promise<void> {
+  await assertPermission('orders.pay')
   // Retry si la commande n'existe pas encore (création en cours de sync) ou collision invoice_number
   const maxRetries = 5
   const retryDelay = 500 // ms
@@ -482,6 +487,7 @@ export async function updateOrderPayment(
 
 /** Annule une commande en base. La table associée n'est pas libérée automatiquement. */
 export async function cancelOrderInDb(orderId: string): Promise<void> {
+  await assertPermission('orders.cancel')
   // Mettre à jour le statut de la commande à 'cancelled'
   const { error: updateError } = await (supabase.from('orders') as any)
     .update({ status: 'cancelled' })
@@ -498,6 +504,7 @@ export async function updateOrderItemsInDb(
   orderId: string,
   items: CreateOrderFromPosItem[]
 ): Promise<void> {
+  await assertPermission('orders.update')
   const { data: existing } = await supabase
     .from('order_items')
     .select('id')

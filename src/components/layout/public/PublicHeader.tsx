@@ -71,7 +71,7 @@ export function PublicHeader() {
               <div className="relative w-32 h-12 sm:w-40 sm:h-14 md:w-48 md:h-16 flex items-center">
                 <Image
                   src="https://nlpizsiqsanewubknrsu.supabase.co/storage/v1/object/public/images/images_public/logo.png"
-                  alt="Mess des Officiers"
+                  alt="Restaurant Central"
                   fill
                   className="object-contain"
                   priority
@@ -170,7 +170,7 @@ export function PublicHeader() {
               {user ? (
                 <div className="flex items-center gap-2 ml-2">
                   <Link
-                    href={user.role === 'admin' ? '/dashboard' : '/home'}
+                    href={user.role === 'admin' || user.dashboardRole ? '/dashboard' : '/home'}
                     className="flex items-center gap-2 px-4 py-2.5 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition-colors"
                   >
                     <User className="w-4 h-4" />
@@ -185,15 +185,7 @@ export function PublicHeader() {
                     <span className="hidden sm:inline">Déconnexion</span>
                   </button>
                 </div>
-              ) : (
-                <Link
-                  href="/login"
-                  className="flex items-center gap-2 px-4 py-2.5 bg-[#F4A024] text-white text-sm font-medium rounded-lg hover:bg-[#C97F16] transition-colors ml-2"
-                >
-                  <User className="w-4 h-4" />
-                  Connexion
-                </Link>
-              )}
+              ) : null}
             </div>
 
             {/* Mobile Actions */}

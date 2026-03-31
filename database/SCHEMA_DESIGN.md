@@ -1,4 +1,4 @@
-# Proposition de schéma de base de données — Mess des Officiers
+# Proposition de schéma de base de données — Restaurant Central
 
 > Conçu à partir des **types**, **données mock**, **formulaires** et **stores** existants du frontend.
 

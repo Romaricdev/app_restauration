@@ -53,32 +53,83 @@ interface UseDataResult<T> {
   refetch: () => Promise<void>
 }
 
+type UseDataOptions = {
+  cacheKey?: string
+  ttlMs?: number
+}
+
+type CacheEntry = {
+  data: unknown
+  expiresAt: number
+}
+
+const DEFAULT_TTL_MS = 15_000
+const dataCache = new Map<string, CacheEntry>()
+const inFlightRequests = new Map<string, Promise<unknown>>()
+
 function useData<T>(
   fetcher: () => Promise<T>,
-  initial: T
+  initial: T,
+  options?: UseDataOptions
 ): UseDataResult<T> {
   const [data, setData] = useState<T>(initial)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (force = false) => {
+    const cacheKey = options?.cacheKey
+    const ttlMs = options?.ttlMs ?? DEFAULT_TTL_MS
+
+    if (!force && cacheKey) {
+      const cached = dataCache.get(cacheKey)
+      if (cached && cached.expiresAt > Date.now()) {
+        setData(cached.data as T)
+        setLoading(false)
+        return
+      }
+    }
+
     setLoading(true)
     setError(null)
     try {
-      const result = await fetcher()
+      let result: T
+      if (cacheKey) {
+        const running = inFlightRequests.get(cacheKey) as Promise<T> | undefined
+        if (running) {
+          result = await running
+        } else {
+          const request = fetcher()
+          inFlightRequests.set(cacheKey, request as Promise<unknown>)
+          try {
+            result = await request
+          } finally {
+            inFlightRequests.delete(cacheKey)
+          }
+        }
+        dataCache.set(cacheKey, {
+          data: result,
+          expiresAt: Date.now() + ttlMs,
+        })
+      } else {
+        result = await fetcher()
+      }
       setData(result)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
     }
-  }, [fetcher])
+  }, [fetcher, options?.cacheKey, options?.ttlMs])
 
   useEffect(() => {
     load()
   }, [load])
 
-  return { data, loading, error, refetch: load }
+  const refetch = useCallback(async () => {
+    await load(true)
+  }, [load])
+
+  return { data, loading, error, refetch }
 }
 
 /** Menu page : categories + tous les menu items. Filtrage par catégorie côté client. */
@@ -101,11 +152,11 @@ export function useMenuData(): UseDataResult<{
 }
 
 export function useCategories(): UseDataResult<Category[]> {
-  return useData(fetchCategories, [])
+  return useData(fetchCategories, [], { cacheKey: 'categories' })
 }
 
 export function useMenuItems(): UseDataResult<MenuItem[]> {
-  return useData(fetchMenuItems, [])
+  return useData(fetchMenuItems, [], { cacheKey: 'menu-items' })
 }
 
 export function useMenuItem(
@@ -115,7 +166,7 @@ export function useMenuItem(
     () => (id != null ? fetchMenuItem(id) : Promise.resolve(null)),
     [id]
   )
-  return useData(fetcher, null)
+  return useData(fetcher, null, { cacheKey: `menu-item:${id ?? 'none'}` })
 }
 
 export function useAddonsWithCategoryOptions(
@@ -132,19 +183,19 @@ export function useAddonsWithCategoryOptions(
 }
 
 export function useAddonCategoryOptions(): UseDataResult<AddonCategoryOption[]> {
-  return useData(fetchAddonCategoryOptions, [])
+  return useData(fetchAddonCategoryOptions, [], { cacheKey: 'addon-category-options' })
 }
 
 export function useAddons(): UseDataResult<Addon[]> {
-  return useData(fetchAddons, [])
+  return useData(fetchAddons, [], { cacheKey: 'addons' })
 }
 
 export function useTables(): UseDataResult<RestaurantTable[]> {
-  return useData(fetchTables, [])
+  return useData(fetchTables, [], { cacheKey: 'tables' })
 }
 
 export function useTableReservations(): UseDataResult<TableReservation[]> {
-  return useData(fetchTableReservations, [])
+  return useData(fetchTableReservations, [], { cacheKey: 'table-reservations' })
 }
 
 export function useTableReservationsByTable(
@@ -157,11 +208,11 @@ export function useTableReservationsByTable(
         : Promise.resolve([]),
     [tableNumber]
   )
-  return useData(fetcher, [])
+  return useData(fetcher, [], { cacheKey: `table-reservations:${tableNumber ?? 'none'}` })
 }
 
 export function useHallReservations(): UseDataResult<HallReservation[]> {
-  return useData(fetchHallReservations, [])
+  return useData(fetchHallReservations, [], { cacheKey: 'hall-reservations' })
 }
 
 export function useHallReservationsByHall(
@@ -174,15 +225,15 @@ export function useHallReservationsByHall(
         : Promise.resolve([]),
     [hallId]
   )
-  return useData(fetcher, [])
+  return useData(fetcher, [], { cacheKey: `hall-reservations:${hallId ?? 'none'}` })
 }
 
 export function useHalls(): UseDataResult<Hall[]> {
-  return useData(fetchHalls, [])
+  return useData(fetchHalls, [], { cacheKey: 'halls' })
 }
 
 export function useReservationSlotTypes(): UseDataResult<ReservationSlotType[]> {
-  return useData(fetchReservationSlotTypes, [])
+  return useData(fetchReservationSlotTypes, [], { cacheKey: 'reservation-slot-types' })
 }
 
 export function useHallPacks(options?: {
@@ -197,7 +248,9 @@ export function useHallPacks(options?: {
       }),
     [options?.slotTypeSlug, options?.hallId]
   )
-  return useData(fetcher, [])
+  return useData(fetcher, [], {
+    cacheKey: `hall-packs:${options?.slotTypeSlug ?? 'all'}:${options?.hallId ?? 'all'}`,
+  })
 }
 
 export function useReservationContact(): UseDataResult<ReservationContact> {
@@ -206,15 +259,15 @@ export function useReservationContact(): UseDataResult<ReservationContact> {
     telephonePaiement: [],
     email: '',
   }
-  return useData(fetchReservationContact, defaultContact)
+  return useData(fetchReservationContact, defaultContact, { cacheKey: 'reservation-contact' })
 }
 
 export function useOrders(): UseDataResult<Order[]> {
-  return useData(fetchOrders, [])
+  return useData(fetchOrders, [], { cacheKey: 'orders' })
 }
 
 export function useMenus(): UseDataResult<Menu[]> {
-  return useData(fetchMenus, [])
+  return useData(fetchMenus, [], { cacheKey: 'menus' })
 }
 
 export function useMenusByType(
@@ -225,11 +278,11 @@ export function useMenusByType(
       type ? fetchMenusByType(type) : Promise.resolve([]),
     [type]
   )
-  return useData(fetcher, [])
+  return useData(fetcher, [], { cacheKey: `menus-by-type:${type ?? 'none'}` })
 }
 
 export function useActiveMenus(): UseDataResult<Menu[]> {
-  return useData(fetchActiveMenus, [])
+  return useData(fetchActiveMenus, [], { cacheKey: 'active-menus' })
 }
 
 export function useMenuById(
@@ -239,7 +292,7 @@ export function useMenuById(
     () => (id != null ? fetchMenuById(id) : Promise.resolve(null)),
     [id]
   )
-  return useData(fetcher, null)
+  return useData(fetcher, null, { cacheKey: `menu-by-id:${id ?? 'none'}` })
 }
 
 async function fetchPosData(): Promise<{
@@ -287,15 +340,15 @@ export function usePosData(): UseDataResult<{
 }
 
 export function useDashboardStats(): UseDataResult<DashboardStats | null> {
-  return useData(fetchDashboardStats, null as DashboardStats | null)
+  return useData(fetchDashboardStats, null as DashboardStats | null, { cacheKey: 'dashboard-stats', ttlMs: 10_000 })
 }
 
 export function useRevenueByDay(): UseDataResult<DailyStat[]> {
-  return useData(fetchRevenueByDay, [])
+  return useData(fetchRevenueByDay, [], { cacheKey: 'revenue-by-day', ttlMs: 20_000 })
 }
 
 export function useTopSellingItems(): UseDataResult<
   { name: string; quantity: number; revenue: number }[]
 > {
-  return useData(fetchTopSellingItems, [])
+  return useData(fetchTopSellingItems, [], { cacheKey: 'top-selling-items', ttlMs: 20_000 })
 }

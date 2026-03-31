@@ -1,5 +1,5 @@
 -- ============================================
--- Mess des Officiers — Données initiales
+-- Restaurant Central — Données initiales
 -- Exécuter après schema.sql
 -- ============================================
 
@@ -25,7 +25,7 @@ INSERT INTO app_settings (key, value) VALUES
   ('service_fee_rate', to_jsonb(0.1::numeric)),
   ('service_fee_min', to_jsonb(500::int)),
   ('time_slots', '["11:30","12:00","12:30","13:00","13:30","14:00","19:00","19:30","20:00","20:30","21:00","21:30"]'::jsonb),
-  ('restaurant_name', to_jsonb('Mess des Officiers'::text)),
+  ('restaurant_name', to_jsonb('Restaurant Central'::text)),
   ('restaurant_address', to_jsonb('Quartier Général, Yaoundé'::text)),
   ('restaurant_phone', to_jsonb('+237 6XX XXX XXX'::text)),
   ('restaurant_email', to_jsonb('contact@messofficiers.cm'::text))

@@ -11,6 +11,8 @@ import { QrCode, Plus, Edit, Grid3X3 } from 'lucide-react'
 import type { RestaurantTable } from '@/types'
 import { createTable, updateTable, deleteTable } from '@/lib/data'
 import { useUIStore } from '@/store'
+import { getDashboardActionErrorMessage } from '@/lib/errors/permission'
+import { useAuth } from '@/hooks/useAuth'
 
 // ============================================
 // TABLE CARD COMPONENT
@@ -20,9 +22,10 @@ interface TableCardProps {
   table: RestaurantTable
   onViewQR?: (table: RestaurantTable) => void
   onEdit?: (table: RestaurantTable) => void
+  canUpdate: boolean
 }
 
-function TableCard({ table, onViewQR, onEdit }: TableCardProps) {
+function TableCard({ table, onViewQR, onEdit, canUpdate }: TableCardProps) {
   const statusConfig = {
     available: { label: 'Libre', variant: 'success' as const },
     occupied: { label: 'Occupée', variant: 'error' as const },
@@ -73,6 +76,7 @@ function TableCard({ table, onViewQR, onEdit }: TableCardProps) {
                 onEdit?.(table)
               }}
               title="Modifier"
+              disabled={!canUpdate}
             >
               <Edit className="w-4 h-4" />
             </Button>
@@ -90,6 +94,10 @@ function TableCard({ table, onViewQR, onEdit }: TableCardProps) {
 export default function TablesPage() {
   const { data: tables, loading: dataLoading, refetch: refetchTables } = useTables()
   const addToast = useUIStore((s) => s.addToast)
+  const { hasPermission } = useAuth()
+  const canCreate = hasPermission('tables.create')
+  const canUpdate = hasPermission('tables.update')
+  const canDelete = hasPermission('tables.delete')
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [selectedTable, setSelectedTable] = useState<RestaurantTable | null>(null)
@@ -140,7 +148,7 @@ export default function TablesPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de la suppression.',
+          message: getDashboardActionErrorMessage(e, 'Erreur lors de la suppression.'),
         })
       }
     },
@@ -185,7 +193,7 @@ export default function TablesPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de l\'enregistrement.',
+          message: getDashboardActionErrorMessage(e, "Erreur lors de l'enregistrement."),
         })
       }
     },
@@ -198,8 +206,10 @@ export default function TablesPage() {
         onEdit: handleEdit,
         onDelete: handleDelete,
         onGenerateQR: handleViewQR,
+        canUpdate,
+        canDelete,
       }),
-    [handleDelete]
+    [handleDelete, canUpdate, canDelete]
   )
 
   return (
@@ -214,7 +224,7 @@ export default function TablesPage() {
             Gérez les tables du restaurant et leurs QR codes
           </p>
         </div>
-        <Button variant="primary" onClick={handleAdd} className="gap-2">
+        <Button variant="primary" onClick={handleAdd} className="gap-2" disabled={!canCreate}>
           <Plus className="w-4 h-4" />
           Ajouter une table
         </Button>
@@ -312,6 +322,7 @@ export default function TablesPage() {
                 table={table}
                 onViewQR={handleViewQR}
                 onEdit={handleEdit}
+              canUpdate={canUpdate}
               />
             </div>
           ))}
@@ -329,7 +340,8 @@ export default function TablesPage() {
               description="Aucune table trouvée avec ce filtre"
               action={{
                 label: 'Ajouter une table',
-                onClick: handleAdd
+                onClick: handleAdd,
+                disabled: !canCreate,
               }}
             />
           </CardContent>

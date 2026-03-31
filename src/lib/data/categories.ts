@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase'
 import { slugify } from '@/lib/utils'
 import type { Category } from '@/types'
+import { assertPermission } from './permission-guard'
 
 interface DbCategory {
   id: string
@@ -11,6 +12,8 @@ interface DbCategory {
   created_at: string
   updated_at: string
 }
+
+const CATEGORY_COLUMNS = 'id, name, description, icon, display_order, created_at, updated_at'
 
 function mapCategory(row: DbCategory): Category {
   return {
@@ -25,7 +28,7 @@ function mapCategory(row: DbCategory): Category {
 export async function fetchCategories(): Promise<Category[]> {
   const { data, error } = await supabase
     .from('categories')
-    .select('*')
+    .select(CATEGORY_COLUMNS)
     .order('display_order', { ascending: true })
 
   if (error) throw error
@@ -36,6 +39,7 @@ export type CreateCategoryInput = { name: string; description?: string; icon?: s
 export type UpdateCategoryInput = Partial<CreateCategoryInput>
 
 export async function createCategory(input: CreateCategoryInput): Promise<Category> {
+  await assertPermission('categories.create')
   const id = slugify(input.name)
   const row = {
     id,
@@ -46,13 +50,14 @@ export async function createCategory(input: CreateCategoryInput): Promise<Catego
   }
   const { data, error } = await (supabase.from('categories') as any)
     .insert(row)
-    .select()
+    .select(CATEGORY_COLUMNS)
     .single()
   if (error) throw error
   return mapCategory(data as DbCategory)
 }
 
 export async function updateCategory(id: string, input: UpdateCategoryInput): Promise<Category> {
+  await assertPermission('categories.update')
   const payload: Record<string, unknown> = {}
   if (input.name != null) payload.name = input.name.trim()
   if (input.description !== undefined) payload.description = input.description?.trim() || null
@@ -61,13 +66,14 @@ export async function updateCategory(id: string, input: UpdateCategoryInput): Pr
   const { data, error } = await (supabase.from('categories') as any)
     .update(payload)
     .eq('id', id)
-    .select()
+    .select(CATEGORY_COLUMNS)
     .single()
   if (error) throw error
   return mapCategory(data as DbCategory)
 }
 
 export async function deleteCategory(id: string): Promise<void> {
+  await assertPermission('categories.delete')
   const { error } = await supabase.from('categories').delete().eq('id', id)
   if (error) throw error
 }

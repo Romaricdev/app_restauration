@@ -53,7 +53,7 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
           return
         }
 
-        if (finalUser.role === 'admin') {
+        if (finalUser.role === 'admin' || finalUser.dashboardRole) {
           router.push('/dashboard')
         } else {
           router.push('/home')

@@ -31,6 +31,8 @@ import {
   Trash2,
 } from 'lucide-react'
 import { HallPackFormModal } from '@/components/modals/forms'
+import { getDashboardActionErrorMessage } from '@/lib/errors/permission'
+import { useAuth } from '@/hooks/useAuth'
 import type {
   ReservationSlotType,
   HallPack,
@@ -45,9 +47,11 @@ import type {
 function SlotTypeRow({
   slot,
   onSave,
+  canUpdate,
 }: {
   slot: ReservationSlotType
   onSave: () => void
+  canUpdate: boolean
 }) {
   const [editing, setEditing] = useState(false)
   const [name, setName] = useState(slot.name)
@@ -65,7 +69,7 @@ function SlotTypeRow({
     } catch (e) {
       addToast({
         type: 'error',
-        message: e instanceof Error ? e.message : 'Erreur',
+        message: getDashboardActionErrorMessage(e, 'Erreur lors de la mise à jour du créneau.'),
       })
     } finally {
       setSaving(false)
@@ -116,7 +120,7 @@ function SlotTypeRow({
             </Button>
           </div>
         ) : (
-          <Button variant="ghost" size="icon-sm" onClick={() => setEditing(true)} title="Modifier">
+          <Button variant="ghost" size="icon-sm" onClick={() => setEditing(true)} title="Modifier" disabled={!canUpdate}>
             <Edit className="w-4 h-4" />
           </Button>
         )}
@@ -134,11 +138,15 @@ function HallPackRow({
   hallName,
   onEdit,
   onDelete,
+  canUpdate,
+  canDelete,
 }: {
   pack: HallPack
   hallName: string
   onEdit: () => void
   onDelete: () => void
+  canUpdate: boolean
+  canDelete: boolean
 }) {
   const [deleting, setDeleting] = useState(false)
   const addToast = useUIStore((s) => s.addToast)
@@ -153,7 +161,7 @@ function HallPackRow({
     } catch (e) {
       addToast({
         type: 'error',
-        message: e instanceof Error ? e.message : 'Erreur',
+        message: getDashboardActionErrorMessage(e, 'Erreur lors de la suppression du pack.'),
       })
     } finally {
       setDeleting(false)
@@ -185,14 +193,14 @@ function HallPackRow({
       </td>
       <td className="py-3 px-4 text-right">
         <div className="flex gap-1 justify-end">
-          <Button variant="ghost" size="icon-sm" onClick={onEdit} title="Modifier">
+          <Button variant="ghost" size="icon-sm" onClick={onEdit} title="Modifier" disabled={!canUpdate}>
             <Edit className="w-4 h-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon-sm"
             onClick={handleDelete}
-            disabled={deleting}
+            disabled={deleting || !canDelete}
             title="Supprimer"
             className="text-red-600 hover:text-red-700 hover:bg-red-50"
           >
@@ -210,6 +218,10 @@ function HallPackRow({
 
 export default function ReservationHallsPage() {
   const addToast = useUIStore((s) => s.addToast)
+  const { hasPermission } = useAuth()
+  const canCreate = hasPermission('reservation_halls.create')
+  const canUpdate = hasPermission('reservation_halls.update')
+  const canDelete = hasPermission('reservation_halls.delete')
   const { data: slotTypes, loading: loadingSlots, refetch: refetchSlots } = useReservationSlotTypes()
   const { data: packs, loading: loadingPacks, refetch: refetchPacks } = useHallPacks()
   const { data: halls } = useHalls()
@@ -255,15 +267,29 @@ export default function ReservationHallsPage() {
   }, [packs])
 
   const handleCreatePack = async (data: CreateHallPackInput) => {
-    await createHallPack(data)
-    addToast({ type: 'success', message: 'Pack créé' })
-    refetchPacks()
+    try {
+      await createHallPack(data)
+      addToast({ type: 'success', message: 'Pack créé' })
+      refetchPacks()
+    } catch (e) {
+      addToast({
+        type: 'error',
+        message: getDashboardActionErrorMessage(e, 'Création de pack impossible.'),
+      })
+    }
   }
 
   const handleUpdatePack = async (id: number, data: UpdateHallPackInput) => {
-    await updateHallPack(id, data)
-    addToast({ type: 'success', message: 'Pack mis à jour' })
-    refetchPacks()
+    try {
+      await updateHallPack(id, data)
+      addToast({ type: 'success', message: 'Pack mis à jour' })
+      refetchPacks()
+    } catch (e) {
+      addToast({
+        type: 'error',
+        message: getDashboardActionErrorMessage(e, 'Mise à jour de pack impossible.'),
+      })
+    }
   }
 
   const handleSaveContact = async () => {
@@ -276,7 +302,7 @@ export default function ReservationHallsPage() {
     } catch (e) {
       addToast({
         type: 'error',
-        message: e instanceof Error ? e.message : 'Erreur',
+        message: getDashboardActionErrorMessage(e, 'Enregistrement du contact impossible.'),
       })
     } finally {
       setSavingContact(false)
@@ -318,7 +344,7 @@ export default function ReservationHallsPage() {
               </thead>
               <tbody>
                 {(slotTypes ?? []).map((slot) => (
-                  <SlotTypeRow key={slot.id} slot={slot} onSave={refetchSlots} />
+                  <SlotTypeRow key={slot.id} slot={slot} onSave={refetchSlots} canUpdate={canUpdate} />
                 ))}
               </tbody>
             </table>
@@ -346,6 +372,7 @@ export default function ReservationHallsPage() {
               setPackModalOpen(true)
             }}
             className="gap-2"
+            disabled={!canCreate}
           >
             <Plus className="w-4 h-4" />
             Ajouter un pack
@@ -388,6 +415,8 @@ export default function ReservationHallsPage() {
                                   setPackModalOpen(true)
                                 }}
                                 onDelete={refetchPacks}
+                                canUpdate={canUpdate}
+                                canDelete={canDelete}
                               />
                             )
                           )
@@ -486,7 +515,7 @@ export default function ReservationHallsPage() {
               <Button
                 variant="primary"
                 onClick={handleSaveContact}
-                disabled={savingContact || !contactDirty}
+                disabled={savingContact || !contactDirty || !canUpdate}
                 className="gap-2"
               >
                 {savingContact ? (

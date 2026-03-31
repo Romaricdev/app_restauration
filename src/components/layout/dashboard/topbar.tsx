@@ -8,6 +8,29 @@ import { useUIStore } from '@/store'
 import { useAuth } from '@/hooks/useAuth'
 import { cn } from '@/lib/utils'
 
+function formatRoleLabel(userRole?: string, dashboardRole?: string, isSuperAdmin?: boolean) {
+  if (isSuperAdmin || dashboardRole === 'super_admin') return 'Super Admin'
+  const role = dashboardRole ?? userRole
+  switch (role) {
+    case 'admin':
+      return 'Admin'
+    case 'manager':
+      return 'Manager'
+    case 'staff':
+      return 'Staff'
+    case 'caissier':
+      return 'Caissier'
+    default:
+      if (role && role.trim().length > 0) {
+        return role
+          .split('_')
+          .map((chunk) => chunk.charAt(0).toUpperCase() + chunk.slice(1))
+          .join(' ')
+      }
+      return 'Utilisateur'
+  }
+}
+
 export function DashboardTopbar() {
   const router = useRouter()
   const { toggleSidebar } = useUIStore()
@@ -51,7 +74,7 @@ export function DashboardTopbar() {
               {user?.name || 'Utilisateur'}
             </p>
             <p className="text-xs text-dashboard-text-muted">
-              Administrateur
+              {formatRoleLabel(user?.role, user?.dashboardRole, user?.isSuperAdmin)}
             </p>
           </div>
           <div className="relative">

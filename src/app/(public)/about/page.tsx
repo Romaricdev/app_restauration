@@ -43,7 +43,7 @@ function AboutHero() {
         </FadeIn>
         <FadeIn delay={0.3} direction="up">
           <p className="text-base sm:text-lg lg:text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed text-justify">
-            Découvrez l&apos;histoire du Mess des Officiers, un établissement d&apos;exception 
+            Découvrez l&apos;histoire du Restaurant Central, un établissement d&apos;exception 
             alliant tradition culinaire camerounaise et excellence du service.
           </p>
         </FadeIn>
@@ -81,7 +81,7 @@ function StorySection() {
               </h2>
               <div className="space-y-4 text-base sm:text-lg text-gray-600 leading-relaxed text-justify">
                 <p>
-                  Fondé en 2020, le Mess des Officiers est né d&apos;une passion pour la gastronomie 
+                  Fondé en 2020, le Restaurant Central est né d&apos;une passion pour la gastronomie 
                   camerounaise et le désir de créer un espace où tradition et modernité se rencontrent.
                 </p>
                 <p>
@@ -200,7 +200,7 @@ function TeamSection() {
               Notre Équipe
             </h2>
             <p className="text-base sm:text-lg text-gray-600 max-w-2xl mx-auto text-justify">
-              Rencontrez les talents qui font du Mess des Officiers une expérience culinaire unique.
+              Rencontrez les talents qui font du Restaurant Central une expérience culinaire unique.
             </p>
           </div>
         </FadeIn>

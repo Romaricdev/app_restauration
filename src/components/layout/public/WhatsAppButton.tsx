@@ -9,7 +9,7 @@ interface WhatsAppButtonProps {
 
 export function WhatsAppButton({ 
   phoneNumber = '237691234567',
-  message = 'Hello! I would like to make a reservation at Mess des Officiers.'
+  message = 'Hello! I would like to make a reservation at Restaurant Central.'
 }: WhatsAppButtonProps) {
   const encodedMessage = encodeURIComponent(message)
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodedMessage}`

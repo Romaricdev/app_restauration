@@ -21,6 +21,8 @@ import {
   type CreateHallReservationInput,
 } from '@/lib/data'
 import { useUIStore } from '@/store'
+import { getDashboardActionErrorMessage } from '@/lib/errors/permission'
+import { useAuth } from '@/hooks/useAuth'
 
 // ============================================
 // RESERVATION CARD COMPONENT (Unified)
@@ -32,9 +34,19 @@ interface ReservationCardProps {
   onCancel?: (reservation: Reservation) => void
   onViewDetail?: (reservation: Reservation) => void
   getHallById?: (id: number | string) => { images?: string[] } | null
+  canUpdateTable: boolean
+  canUpdateHall: boolean
 }
 
-function ReservationCard({ reservation, onConfirm, onCancel, onViewDetail, getHallById }: ReservationCardProps) {
+function ReservationCard({
+  reservation,
+  onConfirm,
+  onCancel,
+  onViewDetail,
+  getHallById,
+  canUpdateTable,
+  canUpdateHall,
+}: ReservationCardProps) {
   const statusConfig = {
     pending: { label: 'En attente de validation', variant: 'warning' as const },
     confirmed: { label: 'Confirmée', variant: 'success' as const },
@@ -49,6 +61,7 @@ function ReservationCard({ reservation, onConfirm, onCancel, onViewDetail, getHa
   const hallImage = hallReservation && getHallById
     ? (getHallById(hallReservation.hallId)?.images?.[0]) || 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=800&auto=format&fit=crop'
     : null
+  const canUpdateReservation = isTableReservation ? canUpdateTable : canUpdateHall
 
   return (
     <Card variant="dashboard" padding="none" interactive className="overflow-hidden">
@@ -161,6 +174,7 @@ function ReservationCard({ reservation, onConfirm, onCancel, onViewDetail, getHa
                     size="sm"
                     onClick={() => onConfirm?.(reservation)}
                     className="gap-2 flex-1"
+                    disabled={!canUpdateReservation}
                   >
                     <CheckCircle className="w-4 h-4" />
                     Confirmer
@@ -170,6 +184,7 @@ function ReservationCard({ reservation, onConfirm, onCancel, onViewDetail, getHa
                     size="sm"
                     onClick={() => onCancel?.(reservation)}
                     className="gap-2"
+                    disabled={!canUpdateReservation}
                   >
                     <XCircle className="w-4 h-4" />
                     Annuler
@@ -182,6 +197,7 @@ function ReservationCard({ reservation, onConfirm, onCancel, onViewDetail, getHa
                   size="sm"
                   onClick={() => onCancel?.(reservation)}
                   className="gap-2"
+                  disabled={!canUpdateReservation}
                 >
                   <XCircle className="w-4 h-4" />
                   Annuler
@@ -214,6 +230,12 @@ export default function ReservationsPage() {
   const { data: halls } = useHalls()
   const { data: tables } = useTables()
   const addToast = useUIStore((s) => s.addToast)
+  const { hasPermission } = useAuth()
+  const canCreateTableReservation = hasPermission('reservations.create')
+  const canCreateHallReservation = hasPermission('reservation_halls.create')
+  const canUpdateTableReservation = hasPermission('reservations.update')
+  const canUpdateHallReservation = hasPermission('reservation_halls.update')
+  const canUpdateAnyReservation = canUpdateTableReservation || canUpdateHallReservation
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [typeFilter, setTypeFilter] = useState<'all' | 'table' | 'hall'>('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'confirmed' | 'cancelled'>('all')
@@ -270,7 +292,7 @@ export default function ReservationsPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de la confirmation.',
+          message: getDashboardActionErrorMessage(e, 'Erreur lors de la confirmation.'),
         })
       }
     },
@@ -291,7 +313,7 @@ export default function ReservationsPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de l\'annulation.',
+          message: getDashboardActionErrorMessage(e, "Erreur lors de l'annulation."),
         })
       }
     },
@@ -305,18 +327,32 @@ export default function ReservationsPage() {
 
   const handleCreateTableReservation = useCallback(
     async (data: CreateTableReservationInput) => {
-      await createTableReservation(data)
-      await refetchReservations()
-      addToast({ type: 'success', message: 'Réservation de table créée.' })
+      try {
+        await createTableReservation(data)
+        await refetchReservations()
+        addToast({ type: 'success', message: 'Réservation de table créée.' })
+      } catch (e) {
+        addToast({
+          type: 'error',
+          message: getDashboardActionErrorMessage(e, 'Création de réservation impossible.'),
+        })
+      }
     },
     [refetchReservations, addToast]
   )
 
   const handleCreateHallReservation = useCallback(
     async (data: CreateHallReservationInput) => {
-      await createHallReservation(data)
-      await refetchReservations()
-      addToast({ type: 'success', message: 'Réservation de salle créée.' })
+      try {
+        await createHallReservation(data)
+        await refetchReservations()
+        addToast({ type: 'success', message: 'Réservation de salle créée.' })
+      } catch (e) {
+        addToast({
+          type: 'error',
+          message: getDashboardActionErrorMessage(e, 'Création de réservation impossible.'),
+        })
+      }
     },
     [refetchReservations, addToast]
   )
@@ -327,8 +363,9 @@ export default function ReservationsPage() {
         onView: handleViewDetail,
         onConfirm: handleConfirm,
         onCancel: handleCancel,
+        canUpdate: canUpdateAnyReservation,
       }),
-    [handleConfirm, handleCancel]
+    [handleConfirm, handleCancel, canUpdateAnyReservation]
   )
 
   return (
@@ -349,6 +386,7 @@ export default function ReservationsPage() {
             size="sm"
             className="gap-2"
             onClick={() => setIsTableCreateOpen(true)}
+            disabled={!canCreateTableReservation}
           >
             <Plus className="w-4 h-4" />
             Réserver une table
@@ -358,6 +396,7 @@ export default function ReservationsPage() {
             size="sm"
             className="gap-2"
             onClick={() => setIsHallCreateOpen(true)}
+            disabled={!canCreateHallReservation}
           >
             <Plus className="w-4 h-4" />
             Réserver une salle
@@ -516,6 +555,8 @@ export default function ReservationsPage() {
               onCancel={handleCancel}
               onViewDetail={handleViewDetail}
               getHallById={getHallById}
+              canUpdateTable={canUpdateTableReservation}
+              canUpdateHall={canUpdateHallReservation}
             />
           ))}
         </div>

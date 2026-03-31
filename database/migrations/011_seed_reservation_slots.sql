@@ -15,11 +15,11 @@ ON CONFLICT (slug) DO UPDATE SET
 
 -- 2. Salles (si pas déjà présentes)
 INSERT INTO halls (name, description, capacity, status)
-SELECT 'Salle Principale', 'Salle principale du Mess des Officiers', 300, 'available'
+SELECT 'Salle Principale', 'Salle principale du Restaurant Central', 300, 'available'
 WHERE NOT EXISTS (SELECT 1 FROM halls WHERE name = 'Salle Principale');
 
 INSERT INTO halls (name, description, capacity, status)
-SELECT 'Salle Annexe', 'Salle annexe du Mess des Officiers', 150, 'available'
+SELECT 'Salle Annexe', 'Salle annexe du Restaurant Central', 150, 'available'
 WHERE NOT EXISTS (SELECT 1 FROM halls WHERE name = 'Salle Annexe');
 
 -- 3. Packs Journée pleine - Salle Principale (hall_id récupéré par nom)

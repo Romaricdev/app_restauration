@@ -44,7 +44,7 @@ export default function DashboardHelpPage() {
           Aide utilisateur
         </h1>
         <p className="mt-2 text-dashboard-text-secondary">
-          Guide complet pour utiliser le dashboard et le POS du Mess des Officiers. Toutes les interfaces, actions et workflows sont expliqués de A à Z.
+          Guide complet pour utiliser le dashboard et le POS du Restaurant Central. Toutes les interfaces, actions et workflows sont expliqués de A à Z.
         </p>
       </div>
 
@@ -341,7 +341,7 @@ export default function DashboardHelpPage() {
       </div>
 
       <div className="mt-10 pt-6 border-t border-dashboard-border text-center text-sm text-dashboard-text-muted">
-        <p>Mess des Officiers — Dashboard & POS. Pour toute question, contactez l&apos;administrateur.</p>
+        <p>Restaurant Central — Dashboard & POS. Pour toute question, contactez l&apos;administrateur.</p>
       </div>
     </div>
   )

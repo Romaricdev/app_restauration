@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './database.types.generated'
+import { emitDashboardRequestEnd, emitDashboardRequestStart } from '@/lib/network/activity'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -28,6 +29,7 @@ const persistentFetch: typeof fetch = async (input, init) => {
     signal: undefined,
   }
   
+  emitDashboardRequestStart()
   try {
     const response = await fetch(input, newInit)
     
@@ -41,6 +43,8 @@ const persistentFetch: typeof fetch = async (input, init) => {
     // Log les erreurs de réseau
     console.error(`[Supabase Fetch] Network error for ${url.split('?')[0]}:`, error?.message || error)
     throw error
+  } finally {
+    emitDashboardRequestEnd()
   }
 }
 

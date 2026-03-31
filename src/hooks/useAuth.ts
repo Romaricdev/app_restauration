@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/store/auth-store'
+import { getRoutePermission, hasPermission } from '@/lib/permissions'
 
 /**
  * Hook pour utiliser l'authentification
@@ -38,6 +39,9 @@ export function useAuth() {
     signUp,
     signOut,
     refreshSession,
+    hasPermission: (permission: string) => hasPermission(user, permission),
+    hasAnyPermission: (permissions: string[]) => permissions.some((permission) => hasPermission(user, permission)),
+    hasAllPermissions: (permissions: string[]) => permissions.every((permission) => hasPermission(user, permission)),
   }
 }
 
@@ -87,7 +91,7 @@ export function useRequireAdmin(redirectTo: string = '/home') {
         if (!user) {
           setIsRedirecting(true)
           router.push('/login')
-        } else if (user.role !== 'admin') {
+        } else if (user.role !== 'admin' && !user.dashboardRole) {
           setIsRedirecting(true)
           router.push(redirectTo)
         }
@@ -107,6 +111,41 @@ export function useRequireAdmin(redirectTo: string = '/home') {
     user,
     loading: isLoading,
     isAuthenticated: !!user,
-    isAdmin: user?.role === 'admin',
+    isAdmin: user?.role === 'admin' || !!user?.dashboardRole,
   }
+}
+
+/**
+ * Hook permission-aware pour les routes dashboard.
+ */
+export function useRequirePermission(permission: string, redirectTo: string = '/dashboard') {
+  const router = useRouter()
+  const { user, loading, initialized } = useAuth()
+  const [isRedirecting, setIsRedirecting] = useState(false)
+
+  useEffect(() => {
+    if (isRedirecting || !initialized || loading) return
+    if (!user) {
+      setIsRedirecting(true)
+      router.push('/login')
+      return
+    }
+    if (!hasPermission(user, permission)) {
+      setIsRedirecting(true)
+      router.push(redirectTo)
+    }
+  }, [user, loading, initialized, permission, redirectTo, router, isRedirecting])
+
+  return {
+    user,
+    loading: loading || !initialized || isRedirecting,
+    allowed: hasPermission(user, permission),
+  }
+}
+
+export function useRoutePermission(pathname: string) {
+  const { user } = useAuth()
+  const requiredPermission = getRoutePermission(pathname)
+  const allowed = requiredPermission ? hasPermission(user, requiredPermission) : true
+  return { requiredPermission, allowed }
 }

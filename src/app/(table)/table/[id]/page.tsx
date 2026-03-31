@@ -34,7 +34,7 @@ export default function TablePage({ params }: TablePageProps) {
 
         {/* Title */}
         <h1 className="font-poppins text-2xl font-bold text-site-text-primary mb-2">
-          Bienvenue au Mess des Officiers
+          Bienvenue au Restaurant Central
         </h1>
         
         <p className="text-site-text-secondary mb-6">

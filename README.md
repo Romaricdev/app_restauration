@@ -1,4 +1,4 @@
-# Mess des Officiers - Système de Gestion de Restaurant
+# Restaurant Central - Système de Gestion de Restaurant
 
 ![Next.js](https://img.shields.io/badge/Next.js-16.1-black?logo=next.js)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)
@@ -138,4 +138,4 @@ ISC
 
 ---
 
-Développé avec ❤️ pour le Mess des Officiers
+Développé avec ❤️ pour le Restaurant Central

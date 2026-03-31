@@ -14,6 +14,7 @@ interface EmptyStateProps {
   action?: {
     label: string
     onClick: () => void
+    disabled?: boolean
   }
   className?: string
 }
@@ -43,6 +44,7 @@ function EmptyState({
           variant="primary"
           size="sm"
           onClick={action.onClick}
+          disabled={action.disabled}
         >
           {action.label}
         </Button>

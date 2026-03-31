@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { Menu, MenuProduct, MenuType } from '@/types'
+import { assertPermission } from './permission-guard'
 
 interface DbMenu {
   id: number
@@ -151,6 +152,7 @@ export type UpdateMenuInput = Partial<Omit<CreateMenuInput, 'products'>> & {
 }
 
 export async function createMenu(input: CreateMenuInput): Promise<Menu> {
+  await assertPermission('menus.create')
   const menuRow = {
     name: input.name.trim(),
     description: input.description?.trim() || null,
@@ -178,6 +180,7 @@ export async function updateMenu(
   id: number | string,
   input: UpdateMenuInput
 ): Promise<Menu> {
+  await assertPermission('menus.update')
   const payload: Record<string, unknown> = {}
   if (input.name != null) payload.name = input.name.trim()
   if (input.description !== undefined) payload.description = input.description?.trim() || null
@@ -202,6 +205,7 @@ export async function updateMenu(
 }
 
 export async function duplicateMenu(menu: Menu): Promise<Menu> {
+  await assertPermission('menus.create')
   return createMenu({
     name: `${menu.name} (copie)`,
     description: menu.description,
@@ -212,6 +216,7 @@ export async function duplicateMenu(menu: Menu): Promise<Menu> {
 }
 
 export async function deleteMenu(id: number | string): Promise<void> {
+  await assertPermission('menus.delete')
   const { error } = await supabase.from('menus').delete().eq('id', id)
   if (error) throw error
 }

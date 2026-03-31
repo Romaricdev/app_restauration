@@ -59,7 +59,7 @@ export function PosHeader() {
           <span className="text-white font-bold text-sm">POS</span>
         </div>
         <div>
-          <h1 className="text-gray-900 font-semibold text-sm">Mess des Officiers</h1>
+          <h1 className="text-gray-900 font-semibold text-sm">Restaurant Central</h1>
           <p className="text-gray-500 text-xs">Point de Vente</p>
         </div>
       </div>

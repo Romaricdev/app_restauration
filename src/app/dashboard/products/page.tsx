@@ -17,6 +17,8 @@ import {
   toggleMenuItemAvailable,
 } from '@/lib/data'
 import { useUIStore } from '@/store'
+import { useAuth } from '@/hooks/useAuth'
+import { getDashboardActionErrorMessage } from '@/lib/errors/permission'
 
 // ============================================
 // PRODUCT CARD COMPONENT
@@ -28,9 +30,19 @@ interface ProductCardProps {
   onEdit?: (product: MenuItem) => void
   onToggleAvailable?: (product: MenuItem) => void
   onDelete?: (product: MenuItem) => void
+  canUpdate: boolean
+  canDelete: boolean
 }
 
-const ProductCard = memo(function ProductCard({ product, categoryName, onEdit, onToggleAvailable, onDelete }: ProductCardProps) {
+const ProductCard = memo(function ProductCard({
+  product,
+  categoryName,
+  onEdit,
+  onToggleAvailable,
+  onDelete,
+  canUpdate,
+  canDelete,
+}: ProductCardProps) {
   const handleToggle = (e: React.MouseEvent) => {
     e.stopPropagation()
     onToggleAvailable?.(product)
@@ -105,6 +117,7 @@ const ProductCard = memo(function ProductCard({ product, categoryName, onEdit, o
               size="icon-sm"
               onClick={handleToggle}
               title={product.available ? 'Désactiver' : 'Activer'}
+              disabled={!canUpdate}
             >
               {product.available ? (
                 <Eye className="w-4 h-4" />
@@ -120,6 +133,7 @@ const ProductCard = memo(function ProductCard({ product, categoryName, onEdit, o
                 onEdit?.(product)
               }}
               title="Modifier"
+              disabled={!canUpdate}
             >
               <Edit className="w-4 h-4" />
             </Button>
@@ -131,6 +145,7 @@ const ProductCard = memo(function ProductCard({ product, categoryName, onEdit, o
                 onDelete?.(product)
               }}
               title="Supprimer"
+              disabled={!canDelete}
             >
               <Trash2 className="w-4 h-4 text-red-500" />
             </Button>
@@ -149,6 +164,10 @@ export default function ProductsPage() {
   const { data: menuItems, loading: menuLoading, refetch: refetchMenuItems } = useMenuItems()
   const { data: categories, loading: categoriesLoading } = useCategories()
   const addToast = useUIStore((s) => s.addToast)
+  const { hasPermission } = useAuth()
+  const canCreate = hasPermission('products.create')
+  const canUpdate = hasPermission('products.update')
+  const canDelete = hasPermission('products.delete')
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [categoryFilter, setCategoryFilter] = useState<string>('all')
   const [availableFilter, setAvailableFilter] = useState<'all' | 'available' | 'unavailable'>('all')
@@ -208,7 +227,7 @@ export default function ProductsPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors du changement de disponibilité.',
+          message: getDashboardActionErrorMessage(e, 'Erreur lors du changement de disponibilité.'),
         })
       }
     },
@@ -225,7 +244,7 @@ export default function ProductsPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de la suppression.',
+          message: getDashboardActionErrorMessage(e, 'Erreur lors de la suppression.'),
         })
       }
     },
@@ -273,7 +292,7 @@ export default function ProductsPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de l\'enregistrement.',
+          message: getDashboardActionErrorMessage(e, "Erreur lors de l'enregistrement."),
         })
       }
     },
@@ -287,8 +306,10 @@ export default function ProductsPage() {
         onEdit: handleEdit,
         onDelete: handleDelete,
         onToggleAvailability: handleToggleAvailable,
+        canUpdate,
+        canDelete,
       }),
-    [categories, handleDelete, handleToggleAvailable]
+    [categories, handleDelete, handleToggleAvailable, canUpdate, canDelete]
   )
 
   return (
@@ -303,7 +324,7 @@ export default function ProductsPage() {
             Gérez vos produits et leur disponibilité
           </p>
         </div>
-        <Button variant="primary" onClick={handleAdd} className="gap-2">
+        <Button variant="primary" onClick={handleAdd} className="gap-2" disabled={!canCreate}>
           <Plus className="w-4 h-4" />
           Ajouter un produit
         </Button>
@@ -397,6 +418,8 @@ export default function ProductsPage() {
               onEdit={handleEdit}
               onToggleAvailable={handleToggleAvailable}
               onDelete={handleDelete}
+              canUpdate={canUpdate}
+              canDelete={canDelete}
             />
           ))}
         </div>
@@ -413,7 +436,8 @@ export default function ProductsPage() {
               description="Aucun produit trouvé avec ces filtres"
               action={{
                 label: 'Ajouter un produit',
-                onClick: handleAdd
+                onClick: handleAdd,
+                disabled: !canCreate,
               }}
             />
           </CardContent>

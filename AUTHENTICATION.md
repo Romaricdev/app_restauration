@@ -1,4 +1,4 @@
-# Système d'Authentification - Mess des Officiers
+# Système d'Authentification - Restaurant Central
 
 ## Vue d'ensemble
 

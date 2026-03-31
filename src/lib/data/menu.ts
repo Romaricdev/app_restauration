@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { MenuItem } from '@/types'
+import { assertPermission } from './permission-guard'
 
 interface DbMenuItem {
   id: number
@@ -15,6 +16,9 @@ interface DbMenuItem {
   created_at: string
   updated_at: string
 }
+
+const MENU_ITEM_COLUMNS =
+  'id, category_id, name, description, price, image, available, popular, preparation_time, allergens, created_at, updated_at'
 
 function mapMenuItem(row: DbMenuItem): MenuItem {
   return {
@@ -34,7 +38,7 @@ function mapMenuItem(row: DbMenuItem): MenuItem {
 export async function fetchMenuItems(): Promise<MenuItem[]> {
   const { data, error } = await supabase
     .from('menu_items')
-    .select('*')
+    .select(MENU_ITEM_COLUMNS)
     .order('id', { ascending: true })
 
   if (error) throw error
@@ -44,7 +48,7 @@ export async function fetchMenuItems(): Promise<MenuItem[]> {
 export async function fetchMenuItemsByCategory(categoryId: string): Promise<MenuItem[]> {
   const { data, error } = await supabase
     .from('menu_items')
-    .select('*')
+    .select(MENU_ITEM_COLUMNS)
     .eq('category_id', categoryId)
     .order('id', { ascending: true })
 
@@ -55,7 +59,7 @@ export async function fetchMenuItemsByCategory(categoryId: string): Promise<Menu
 export async function fetchMenuItem(id: number | string): Promise<MenuItem | null> {
   const { data, error } = await supabase
     .from('menu_items')
-    .select('*')
+    .select(MENU_ITEM_COLUMNS)
     .eq('id', id)
     .maybeSingle()
 
@@ -66,7 +70,7 @@ export async function fetchMenuItem(id: number | string): Promise<MenuItem | nul
 export async function fetchPopularItems(): Promise<MenuItem[]> {
   const { data, error } = await supabase
     .from('menu_items')
-    .select('*')
+    .select(MENU_ITEM_COLUMNS)
     .eq('available', true)
     .eq('popular', true)
     .order('id', { ascending: true })
@@ -88,6 +92,7 @@ export type CreateMenuItemInput = {
 export type UpdateMenuItemInput = Partial<CreateMenuItemInput>
 
 export async function createMenuItem(input: CreateMenuItemInput): Promise<MenuItem> {
+  await assertPermission('products.create')
   const row = {
     name: input.name.trim(),
     description: (input.description ?? '').trim(),
@@ -100,7 +105,7 @@ export async function createMenuItem(input: CreateMenuItemInput): Promise<MenuIt
   }
   const { data, error } = await (supabase.from('menu_items') as any)
     .insert(row)
-    .select()
+    .select(MENU_ITEM_COLUMNS)
     .single()
   if (error) throw error
   return mapMenuItem(data as DbMenuItem)
@@ -110,6 +115,7 @@ export async function updateMenuItem(
   id: number | string,
   input: UpdateMenuItemInput
 ): Promise<MenuItem> {
+  await assertPermission('products.update')
   const payload: Record<string, unknown> = {}
   if (input.name != null) payload.name = input.name.trim()
   if (input.description !== undefined) payload.description = (input.description ?? '').trim()
@@ -122,13 +128,14 @@ export async function updateMenuItem(
   const { data, error } = await (supabase.from('menu_items') as any)
     .update(payload)
     .eq('id', id)
-    .select()
+    .select(MENU_ITEM_COLUMNS)
     .single()
   if (error) throw error
   return mapMenuItem(data as DbMenuItem)
 }
 
 export async function deleteMenuItem(id: number | string): Promise<void> {
+  await assertPermission('products.delete')
   const { error } = await supabase.from('menu_items').delete().eq('id', id)
   if (error) throw error
 }
@@ -137,5 +144,6 @@ export async function toggleMenuItemAvailable(
   id: number | string,
   available: boolean
 ): Promise<MenuItem> {
+  await assertPermission('products.update')
   return updateMenuItem(id, { available })
 }

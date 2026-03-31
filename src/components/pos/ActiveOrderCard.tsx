@@ -98,7 +98,7 @@ export const ActiveOrderCard = memo(function ActiveOrderCard({ order, onUpdateSt
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Facture - Mess des Officiers</title>
+          <title>Facture - Restaurant Central</title>
           <style>
             body {
               font-family: monospace;

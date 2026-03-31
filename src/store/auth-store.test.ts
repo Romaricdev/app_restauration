@@ -17,7 +17,7 @@ vi.mock('@/lib/supabase/client', () => ({
       maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
       insert: vi.fn().mockReturnThis(),
       update: vi.fn().mockReturnThis(),
-      then: vi.fn((cb?: (value: unknown) => unknown) => Promise.resolve(cb?.())),
+      then: vi.fn((cb?: (value: unknown) => unknown) => Promise.resolve(cb ? cb(undefined) : undefined)),
     })),
   },
 }))

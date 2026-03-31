@@ -8,6 +8,14 @@ import {
 } from '@/lib/cache/addons-cache'
 import type { Addon, AddonCategoryOption, AddonWithCategoryOption } from '@/types'
 
+async function assertPermission(permissionCode: string, fallbackMessage: string): Promise<void> {
+  const { data, error } = await (supabase.rpc('has_permission', {
+    p_permission_code: permissionCode,
+  }) as any)
+  if (error) throw error
+  if (!data) throw new Error(fallbackMessage)
+}
+
 interface DbAddon {
   id: string
   name: string
@@ -24,6 +32,8 @@ interface DbAddonCategory {
   extra_price: number | null
 }
 
+const ADDON_COLUMNS = 'id, name, price, available, created_at, updated_at'
+
 function mapAddon(row: DbAddon, categoryIds: string[]): Addon {
   return {
     id: row.id,
@@ -37,7 +47,7 @@ function mapAddon(row: DbAddon, categoryIds: string[]): Addon {
 export async function fetchAddons(): Promise<Addon[]> {
   try {
     const [addonsRes, acRes] = await Promise.all([
-      supabase.from('addons').select('*').order('id'),
+      supabase.from('addons').select(ADDON_COLUMNS).order('id'),
       supabase.from('addon_categories').select('addon_id, category_id'),
     ])
     if (addonsRes.error) throw addonsRes.error
@@ -90,7 +100,7 @@ export async function fetchAddonsWithCategoryOptions(
 ): Promise<AddonWithCategoryOption[]> {
   try {
     const [addonsRes, acRes] = await Promise.all([
-      supabase.from('addons').select('*').eq('available', true).order('id'),
+      supabase.from('addons').select(ADDON_COLUMNS).eq('available', true).order('id'),
       supabase
         .from('addon_categories')
         .select('addon_id, category_id, included_free, extra_price')
@@ -151,7 +161,7 @@ export function getExtraPrice(
 export async function fetchAddonById(addonId: string): Promise<Addon | null> {
   const { data: addon, error: addonErr } = await supabase
     .from('addons')
-    .select('*')
+    .select(ADDON_COLUMNS)
     .eq('id', addonId)
     .maybeSingle()
   if (addonErr) throw addonErr
@@ -201,6 +211,10 @@ export async function createAddon(
   input: CreateAddonInput,
   categoryOptions: AddonCategoryOptionInput[]
 ): Promise<Addon> {
+  await assertPermission(
+    'addons.create',
+    "Vous ne pouvez pas effectuer cette action car vous n'avez pas les permissions requises."
+  )
   const id = input.id ?? addonIdFromName(input.name)
   const addonRow = {
     id,
@@ -230,6 +244,10 @@ export async function updateAddon(
   input: UpdateAddonInput,
   categoryOptions?: AddonCategoryOptionInput[]
 ): Promise<Addon> {
+  await assertPermission(
+    'addons.update',
+    "Vous ne pouvez pas effectuer cette action car vous n'avez pas les permissions requises."
+  )
   const payload: Record<string, unknown> = {}
   if (input.name != null) payload.name = input.name.trim()
   if (input.price != null) payload.price = input.price
@@ -258,6 +276,10 @@ export async function updateAddon(
 }
 
 export async function deleteAddon(id: string): Promise<void> {
+  await assertPermission(
+    'addons.delete',
+    "Vous ne pouvez pas effectuer cette action car vous n'avez pas les permissions requises."
+  )
   const { error } = await supabase.from('addons').delete().eq('id', id)
   if (error) throw error
 }

@@ -9,7 +9,10 @@ interface AdminRow {
   id: string
   name: string
   email: string
+  auth_user_id?: string | null
   avatar_url?: string | null
+  is_super_admin?: boolean | null
+  permissions?: string[] | null
   created_at: string
   last_login_at?: string | null
 }
@@ -31,7 +34,125 @@ type AuthTableChain = {
   insert: (v: { id: string; name: string; email: string; role: string }) => { select: () => { maybeSingle: () => Promise<{ data: ProfileRow | null; error: unknown }> } }
 }
 
-const authDb = supabase as unknown as { from: (table: 'admins' | 'profiles') => AuthTableChain }
+const authDb = supabase as unknown as {
+  from: (
+    table:
+      | 'admins'
+      | 'profiles'
+      | 'admin_roles'
+      | 'roles'
+      | 'role_permissions'
+      | 'permissions'
+  ) => AuthTableChain & {
+    select: (cols?: string) => {
+      eq: (col: string, val: string) => {
+        maybeSingle: () => Promise<{ data: unknown; error: unknown }>
+      }
+      in?: (col: string, val: string[]) => Promise<{ data: unknown; error: unknown }>
+      then?: unknown
+    }
+  }
+}
+
+type DashboardRole = string
+
+interface RoleRow {
+  id: string
+  code: string
+}
+
+interface AdminRoleRow {
+  role_id: string
+}
+
+interface RolePermissionRow {
+  permission_id: string
+}
+
+interface PermissionRow {
+  id: string
+  code: string
+}
+
+interface CurrentAuthorizationSnapshot {
+  roles?: string[]
+  permissions?: string[]
+  dashboard_role?: string
+  is_super_admin?: boolean
+}
+
+async function loadAuthorizationForAdmin(admin: AdminRow): Promise<{
+  roles: string[]
+  permissions: string[]
+  dashboardRole: DashboardRole
+}> {
+  try {
+    const { data: snapshot, error: snapshotError } = await (supabase.rpc('current_admin_authorization') as any)
+    if (!snapshotError && snapshot) {
+      const authz = snapshot as CurrentAuthorizationSnapshot
+      return {
+        roles: Array.isArray(authz.roles) ? authz.roles : [],
+        permissions: Array.isArray(authz.permissions) ? authz.permissions : [],
+        dashboardRole: (authz.dashboard_role ?? 'utilisateur') as DashboardRole,
+      }
+    }
+  } catch {
+    // Fallback on legacy loader below.
+  }
+
+  if (admin.is_super_admin) {
+    const { data: allPerms } = await (supabase.from('permissions') as any).select('code')
+    const permissionCodes = ((allPerms ?? []) as PermissionRow[]).map((p) => p.code)
+    return {
+      roles: ['super_admin'],
+      permissions: permissionCodes,
+      dashboardRole: 'super_admin',
+    }
+  }
+
+  const { data: adminRoles } = await (supabase.from('admin_roles') as any)
+    .select('role_id')
+    .eq('admin_id', admin.id)
+  const roleIds = ((adminRoles ?? []) as AdminRoleRow[]).map((row) => row.role_id)
+  if (roleIds.length === 0) {
+    return {
+      roles: [],
+      permissions: Array.isArray(admin.permissions) ? admin.permissions : [],
+      dashboardRole: 'utilisateur',
+    }
+  }
+
+  const { data: rolesRows } = await (supabase.from('roles') as any)
+    .select('id,code')
+    .in('id', roleIds)
+  const roleCodes = ((rolesRows ?? []) as RoleRow[]).map((row) => row.code)
+
+  const { data: rolePermissionRows } = await (supabase.from('role_permissions') as any)
+    .select('permission_id')
+    .in('role_id', roleIds)
+  const permissionIds = Array.from(
+    new Set(((rolePermissionRows ?? []) as RolePermissionRow[]).map((row) => row.permission_id))
+  )
+
+  let permissionCodes: string[] = []
+  if (permissionIds.length > 0) {
+    const { data: permissionsRows } = await (supabase.from('permissions') as any)
+      .select('id,code')
+      .in('id', permissionIds)
+    permissionCodes = ((permissionsRows ?? []) as PermissionRow[]).map((row) => row.code)
+  }
+
+  const fallbackFromLegacy = Array.isArray(admin.permissions) ? admin.permissions : []
+  const mergedPermissions = Array.from(new Set([...permissionCodes, ...fallbackFromLegacy]))
+
+  const dashboardRole: DashboardRole = roleCodes[0] ?? 'utilisateur'
+
+  return {
+    roles: roleCodes,
+    permissions: mergedPermissions,
+    dashboardRole,
+  }
+}
 
 interface AuthState {
   user: User | null
@@ -84,6 +205,10 @@ async function mapSupabaseUserToUser(supabaseUser: SupabaseUser | null): Promise
       name: supabaseUser.user_metadata?.full_name || 'User',
       email: '',
       role: 'customer' as User['role'],
+        dashboardRole: undefined,
+        isSuperAdmin: false,
+        permissions: [],
+        roles: [],
       avatar: undefined,
       createdAt: supabaseUser.created_at || new Date().toISOString(),
     }
@@ -99,6 +224,7 @@ async function mapSupabaseUserToUser(supabaseUser: SupabaseUser | null): Promise
 
     const adminRow = admin as AdminRow | null
     if (adminRow && !adminError) {
+      const authz = await loadAuthorizationForAdmin(adminRow)
       authDb
         .from('admins')
         .update({ last_login_at: new Date().toISOString() })
@@ -110,6 +236,10 @@ async function mapSupabaseUserToUser(supabaseUser: SupabaseUser | null): Promise
         name: adminRow.name,
         email: adminRow.email,
         role: 'admin' as User['role'],
+        dashboardRole: authz.dashboardRole,
+        isSuperAdmin: adminRow.is_super_admin ?? false,
+        permissions: authz.permissions,
+        roles: authz.roles,
         avatar: adminRow.avatar_url ?? undefined,
         createdAt: adminRow.created_at,
       }
@@ -139,6 +269,10 @@ async function mapSupabaseUserToUser(supabaseUser: SupabaseUser | null): Promise
         name: profileRow.name,
         email: profileRow.email,
         role: profileRow.role as User['role'],
+        dashboardRole: undefined,
+        isSuperAdmin: false,
+        permissions: [],
+        roles: [],
         avatar: profileRow.avatar_url ?? undefined,
         createdAt: profileRow.created_at,
       }
@@ -163,6 +297,10 @@ async function mapSupabaseUserToUser(supabaseUser: SupabaseUser | null): Promise
           name: newProfileRow.name,
           email: newProfileRow.email,
           role: newProfileRow.role as User['role'],
+          dashboardRole: undefined,
+          isSuperAdmin: false,
+          permissions: [],
+          roles: [],
           avatar: newProfileRow.avatar_url ?? undefined,
           createdAt: newProfileRow.created_at,
         }
@@ -184,6 +322,10 @@ async function mapSupabaseUserToUser(supabaseUser: SupabaseUser | null): Promise
             name: retryProfileRow.name,
             email: retryProfileRow.email,
             role: retryProfileRow.role as User['role'],
+            dashboardRole: undefined,
+            isSuperAdmin: false,
+            permissions: [],
+            roles: [],
             avatar: retryProfileRow.avatar_url ?? undefined,
             createdAt: retryProfileRow.created_at,
           }
@@ -205,6 +347,10 @@ async function mapSupabaseUserToUser(supabaseUser: SupabaseUser | null): Promise
     name: supabaseUser.user_metadata?.full_name || supabaseUser.email?.split('@')[0] || 'User',
     email: supabaseUser.email || '',
     role: 'customer' as User['role'],
+    dashboardRole: undefined,
+    isSuperAdmin: false,
+    permissions: [],
+    roles: [],
     avatar: undefined,
     createdAt: supabaseUser.created_at || new Date().toISOString(),
   }

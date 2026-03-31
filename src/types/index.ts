@@ -251,12 +251,17 @@ export interface Hall {
 // ============================================
 
 export type UserRole = 'admin' | 'manager' | 'staff' | 'customer'
+export type DashboardRole = string
 
 export interface User {
   id: ID
   name: string
   email: string
   role: UserRole
+  dashboardRole?: DashboardRole
+  isSuperAdmin?: boolean
+  permissions?: string[]
+  roles?: string[]
   avatar?: string
   createdAt: string
 }

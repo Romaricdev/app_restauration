@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase'
 import type { Hall } from '@/types'
+import { assertPermission } from './permission-guard'
 
 interface DbHall {
   id: number
@@ -13,6 +14,9 @@ interface DbHall {
   created_at: string
   updated_at: string
 }
+
+const HALL_COLUMNS =
+  'id, name, description, capacity, amenities, images, status, current_reservation_id, created_at, updated_at'
 
 function mapHall(row: DbHall): Hall {
   const imgs = row.images ?? []
@@ -31,7 +35,7 @@ function mapHall(row: DbHall): Hall {
 export async function fetchHalls(): Promise<Hall[]> {
   const { data, error } = await supabase
     .from('halls')
-    .select('*')
+    .select(HALL_COLUMNS)
     .order('id', { ascending: true })
 
   if (error) throw error
@@ -43,7 +47,7 @@ export async function fetchHallsByStatus(
 ): Promise<Hall[]> {
   const { data, error } = await supabase
     .from('halls')
-    .select('*')
+    .select(HALL_COLUMNS)
     .eq('status', status)
     .order('id', { ascending: true })
 
@@ -54,7 +58,7 @@ export async function fetchHallsByStatus(
 export async function fetchHallById(id: number | string): Promise<Hall | null> {
   const { data, error } = await supabase
     .from('halls')
-    .select('*')
+    .select(HALL_COLUMNS)
     .eq('id', id)
     .maybeSingle()
 
@@ -73,6 +77,7 @@ export type CreateHallInput = {
 export type UpdateHallInput = Partial<CreateHallInput>
 
 export async function createHall(input: CreateHallInput): Promise<Hall> {
+  await assertPermission('halls.create')
   const imgs = (input.images ?? []).filter((u) => typeof u === 'string' && u.trim())
   const row = {
     name: input.name.trim(),
@@ -84,7 +89,7 @@ export async function createHall(input: CreateHallInput): Promise<Hall> {
   }
   const { data, error } = await (supabase.from('halls') as any)
     .insert(row)
-    .select()
+    .select(HALL_COLUMNS)
     .single()
   if (error) throw error
   return mapHall(data as DbHall)
@@ -94,6 +99,7 @@ export async function updateHall(
   id: number | string,
   input: UpdateHallInput
 ): Promise<Hall> {
+  await assertPermission('halls.update')
   const payload: Record<string, unknown> = {}
   if (input.name != null) payload.name = input.name.trim()
   if (input.description !== undefined) payload.description = input.description?.trim() || null
@@ -107,13 +113,14 @@ export async function updateHall(
   const { data, error } = await (supabase.from('halls') as any)
     .update(payload)
     .eq('id', id)
-    .select()
+    .select(HALL_COLUMNS)
     .single()
   if (error) throw error
   return mapHall(data as DbHall)
 }
 
 export async function deleteHall(id: number | string): Promise<void> {
+  await assertPermission('halls.delete')
   const { error } = await supabase.from('halls').delete().eq('id', id)
   if (error) throw error
 }

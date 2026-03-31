@@ -15,6 +15,9 @@ interface MenuColumnsProps {
   onDuplicate: (menu: Menu) => void
   onDelete: (menu: Menu) => void
   onToggleActive: (menu: Menu) => void
+  canCreate: boolean
+  canUpdate: boolean
+  canDelete: boolean
 }
 
 export function getMenuColumns({
@@ -22,6 +25,9 @@ export function getMenuColumns({
   onDuplicate,
   onDelete,
   onToggleActive,
+  canCreate,
+  canUpdate,
+  canDelete,
 }: MenuColumnsProps): ColumnDef<Menu>[] {
   return [
     {
@@ -89,6 +95,7 @@ export function getMenuColumns({
               size="icon-sm"
               onClick={() => onToggleActive(menu)}
               title={menu.active ? 'Désactiver' : 'Activer'}
+              disabled={!canUpdate}
             >
               {menu.active ? (
                 <ToggleRight className="h-4 w-4 text-green-600" />
@@ -101,6 +108,7 @@ export function getMenuColumns({
               size="icon-sm"
               onClick={() => onEdit(menu)}
               title="Modifier"
+              disabled={!canUpdate}
             >
               <Edit className="h-4 w-4" />
             </Button>
@@ -109,6 +117,7 @@ export function getMenuColumns({
               size="icon-sm"
               onClick={() => onDuplicate(menu)}
               title="Dupliquer"
+              disabled={!canCreate}
             >
               <Copy className="h-4 w-4" />
             </Button>
@@ -117,6 +126,7 @@ export function getMenuColumns({
               size="icon-sm"
               onClick={() => onDelete(menu)}
               title="Supprimer"
+              disabled={!canDelete}
             >
               <Trash2 className="h-4 w-4 text-red-500" />
             </Button>

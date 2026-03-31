@@ -1,13 +1,16 @@
 'use client'
 
 import { useEffect } from 'react'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { DashboardSidebar, DashboardTopbar } from '@/components/layout/dashboard'
+import { RequestActivityIndicator } from '@/components/layout/dashboard/RequestActivityIndicator'
 import { Toaster } from '@/components/ui'
 import { MaintenanceOverlay } from '@/components/MaintenanceOverlay'
 import { useAppSettings } from '@/hooks'
 import { useRequireAdmin } from '@/hooks/useAuth'
+import { getFirstAccessibleDashboardPath, getRoutePermission, hasPermission } from '@/lib/permissions'
 import { useAuthStore } from '@/store/auth-store'
+import { emitDashboardNavigationEnd } from '@/lib/network/activity'
 
 export default function DashboardLayout({
   children,
@@ -15,6 +18,7 @@ export default function DashboardLayout({
   children: React.ReactNode
 }) {
   const pathname = usePathname()
+  const router = useRouter()
   const { maintenanceMode, refetch } = useAppSettings()
   const { loading, user, isAdmin, isAuthenticated } = useRequireAdmin()
   const initialized = useAuthStore((state) => state.initialized)
@@ -26,6 +30,21 @@ export default function DashboardLayout({
   }, [refetch])
 
   const showMaintenanceOverlay = maintenanceMode && pathname !== '/dashboard/settings'
+  const requiredPermission = getRoutePermission(pathname)
+  const hasRouteAccess = requiredPermission ? hasPermission(user, requiredPermission) : true
+
+  useEffect(() => {
+    if (!loading && initialized && user && !hasRouteAccess) {
+      const fallbackPath = getFirstAccessibleDashboardPath(user)
+      if (fallbackPath && fallbackPath !== pathname) {
+        router.push(fallbackPath)
+      }
+    }
+  }, [loading, initialized, user, hasRouteAccess, router, pathname])
+
+  useEffect(() => {
+    emitDashboardNavigationEnd()
+  }, [pathname])
 
   // POS has its own full-screen layout
   if (pathname === '/dashboard/pos') {
@@ -70,8 +89,22 @@ export default function DashboardLayout({
     return null // Le hook a déjà déclenché la redirection
   }
 
+  if (!hasRouteAccess) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <p className="text-red-600">Accès refusé</p>
+          <p className="text-sm text-gray-500 mt-2">
+            Vous n&apos;avez pas la permission requise pour cette section.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="dashboard-layout">
+      <RequestActivityIndicator />
       <MaintenanceOverlay
         visible={showMaintenanceOverlay}
         message="Le dashboard est temporairement indisponible. Accédez à Paramètres pour désactiver le mode maintenance."

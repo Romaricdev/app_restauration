@@ -10,6 +10,8 @@ import { Plus, Edit, Grid3X3, Eye, EyeOff } from 'lucide-react'
 import type { Category } from '@/types'
 import { createCategory, updateCategory } from '@/lib/data'
 import { useUIStore } from '@/store'
+import { getDashboardActionErrorMessage } from '@/lib/errors/permission'
+import { useAuth } from '@/hooks/useAuth'
 
 // ============================================
 // CATEGORY CARD COMPONENT
@@ -20,9 +22,10 @@ interface CategoryCardProps {
   isActive: boolean
   onEdit?: (category: Category) => void
   onToggleActive?: (category: Category) => void
+  canUpdate: boolean
 }
 
-function CategoryCard({ category, isActive, onEdit, onToggleActive }: CategoryCardProps) {
+function CategoryCard({ category, isActive, onEdit, onToggleActive, canUpdate }: CategoryCardProps) {
   return (
     <Card variant="dashboard" padding="md" interactive>
       <CardContent className="p-0">
@@ -56,6 +59,7 @@ function CategoryCard({ category, isActive, onEdit, onToggleActive }: CategoryCa
               size="icon-sm"
               onClick={() => onToggleActive?.(category)}
               title={isActive ? 'Désactiver' : 'Activer'}
+              disabled={!canUpdate}
             >
               {isActive ? (
                 <Eye className="w-4 h-4" />
@@ -68,6 +72,7 @@ function CategoryCard({ category, isActive, onEdit, onToggleActive }: CategoryCa
               size="icon-sm"
               onClick={() => onEdit?.(category)}
               title="Modifier"
+              disabled={!canUpdate}
             >
               <Edit className="w-4 h-4" />
             </Button>
@@ -85,6 +90,9 @@ function CategoryCard({ category, isActive, onEdit, onToggleActive }: CategoryCa
 export default function CategoriesPage() {
   const { data: categories, loading: dataLoading, refetch: refetchCategories } = useCategories()
   const addToast = useUIStore((s) => s.addToast)
+  const { hasPermission } = useAuth()
+  const canCreate = hasPermission('categories.create')
+  const canUpdate = hasPermission('categories.update')
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [activeFilter, setActiveFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [activeCategoryIds, setActiveCategoryIds] = useState<Set<string>>(new Set())
@@ -164,7 +172,7 @@ export default function CategoriesPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de l\'enregistrement.',
+          message: getDashboardActionErrorMessage(e, "Erreur lors de l'enregistrement."),
         })
       }
     },
@@ -177,8 +185,9 @@ export default function CategoriesPage() {
         onEdit: handleEdit,
         onToggleActive: handleToggleActive,
         isActive,
+        canUpdate,
       }),
-    [handleToggleActive, isActive]
+    [handleToggleActive, isActive, canUpdate]
   )
 
   return (
@@ -193,7 +202,7 @@ export default function CategoriesPage() {
             Organisez les catégories de votre menu
           </p>
         </div>
-        <Button variant="primary" onClick={handleAdd} className="gap-2">
+        <Button variant="primary" onClick={handleAdd} className="gap-2" disabled={!canCreate}>
           <Plus className="w-4 h-4" />
           Ajouter une catégorie
         </Button>
@@ -280,6 +289,7 @@ export default function CategoriesPage() {
               isActive={isActive(category)}
               onEdit={handleEdit}
               onToggleActive={handleToggleActive}
+              canUpdate={canUpdate}
             />
           ))}
         </div>
@@ -296,7 +306,8 @@ export default function CategoriesPage() {
               description="Aucune catégorie trouvée avec ce filtre"
               action={{
                 label: 'Ajouter une catégorie',
-                onClick: handleAdd
+                onClick: handleAdd,
+                disabled: !canCreate,
               }}
             />
           </CardContent>

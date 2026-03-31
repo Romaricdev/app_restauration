@@ -14,11 +14,15 @@ const statusConfig: Record<string, { label: string; variant: 'success' | 'warnin
 interface HallColumnsProps {
   onEdit: (hall: Hall) => void
   onDelete: (hall: Hall) => void
+  canUpdate: boolean
+  canDelete: boolean
 }
 
 export function getHallColumns({
   onEdit,
   onDelete,
+  canUpdate,
+  canDelete,
 }: HallColumnsProps): ColumnDef<Hall>[] {
   return [
     {
@@ -111,6 +115,7 @@ export function getHallColumns({
               size="icon-sm"
               onClick={() => onEdit(hall)}
               title="Modifier"
+              disabled={!canUpdate}
             >
               <Edit className="h-4 w-4" />
             </Button>
@@ -119,6 +124,7 @@ export function getHallColumns({
               size="icon-sm"
               onClick={() => onDelete(hall)}
               title="Supprimer"
+              disabled={!canDelete}
             >
               <Trash2 className="h-4 w-4 text-red-500" />
             </Button>

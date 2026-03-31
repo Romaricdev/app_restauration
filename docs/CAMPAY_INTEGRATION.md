@@ -1,6 +1,6 @@
 # Intégration Campay — Paiement Mobile Money (MTN / Orange)
 
-> **Projet :** Mess des Officiers  
+> **Projet :** Restaurant Central  
 > **Document :** Procédure d’implémentation Campay, cheminements et bonnes pratiques  
 > **Dernière mise à jour :** Janvier 2026
 
@@ -179,7 +179,7 @@ Aucune clé Campay ni appel direct à Campay ne doit être fait côté navigateu
    `POST /api/campay/collect` avec :
    - `amount` : total du panier  
    - `phone` : numéro du client (depuis le formulaire)  
-   - `description` : ex. « Commande Mess des Officiers »  
+   - `description` : ex. « Commande Restaurant Central »  
    - `external_reference` : `externalReference` ci-dessus  
 
    En cas de réponse non OK, afficher l’erreur (ex. « Demande de paiement impossible ») et ne pas lancer le polling.

@@ -14,6 +14,8 @@ import Image from 'next/image'
 import type { Order, OrderType, OrderStatus } from '@/types'
 import { updateOrderStatus } from '@/lib/data'
 import { useUIStore } from '@/store'
+import { useAuth } from '@/hooks/useAuth'
+import { getDashboardActionErrorMessage } from '@/lib/errors/permission'
 
 // ============================================
 // ORDER CARD COMPONENT
@@ -162,6 +164,7 @@ export default function OrdersPage() {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false)
+  const { hasPermission } = useAuth()
 
   const getProductById = useCallback(
     (id: number | string) => menuItems.find((p) => p.id === id),
@@ -225,11 +228,16 @@ export default function OrdersPage() {
   }, [])
 
   const handleUpdateStatus = useCallback((order: Order) => {
+    if (!hasPermission('orders.update')) return
     setSelectedOrder(order)
     setIsStatusModalOpen(true)
-  }, [])
+  }, [hasPermission])
 
   const handleStatusChange = async (orderId: string | number, newStatus: OrderStatus) => {
+    if (!hasPermission('orders.update')) {
+      addToast({ type: 'error', message: 'Permission insuffisante pour modifier une commande.' })
+      return
+    }
     try {
       await updateOrderStatus(String(orderId), newStatus)
       await refetchOrders()
@@ -238,7 +246,7 @@ export default function OrdersPage() {
     } catch (e) {
       addToast({
         type: 'error',
-        message: e instanceof Error ? e.message : 'Erreur lors de la mise à jour du statut.',
+        message: getDashboardActionErrorMessage(e, 'Erreur lors de la mise à jour du statut.'),
       })
     }
   }

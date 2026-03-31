@@ -31,7 +31,7 @@ function HeroSection() {
       <div className="absolute inset-0 z-0">
         <Image
           src="https://nlpizsiqsanewubknrsu.supabase.co/storage/v1/object/public/images/images_public/9920.jpg"
-          alt="Ambiance gastronomique au Mess des Officiers"
+          alt="Ambiance gastronomique au Restaurant Central"
           fill
           className="object-cover"
           priority
@@ -103,7 +103,7 @@ function AboutSection() {
                 {/* Image du restaurant - Centrée avec ajustement pour compenser l'espace vide */}
                 <Image
                   src="https://nlpizsiqsanewubknrsu.supabase.co/storage/v1/object/public/images/images_public/407802468_025431af-6f8a-41e7-94af-f5162e915f64-removebg-preview.png"
-                  alt="Intérieur élégant du Mess des Officiers"
+                  alt="Intérieur élégant du Restaurant Central"
                   fill
                   className="object-contain"
                   style={{ objectPosition: '55% center' }}
@@ -139,7 +139,7 @@ function AboutSection() {
 
             <div className="space-y-4 sm:space-y-5 text-gray-600 leading-relaxed text-base sm:text-lg max-w-prose">
               <p className="text-base sm:text-lg text-justify">
-                Depuis plus de quinze ans, le <strong className="text-gray-900">Mess des Officiers</strong> perpétue 
+                Depuis plus de quinze ans, le <strong className="text-gray-900">Restaurant Central</strong> perpétue 
                 l&apos;excellence de la gastronomie camerounaise dans un cadre alliant élégance et authenticité.
               </p>
               <p className="text-justify">
@@ -372,7 +372,7 @@ function GallerySection() {
               Découvrez Notre Univers
             </h2>
             <p className="text-sm sm:text-base md:text-base lg:text-lg text-gray-600 max-w-2xl mx-auto text-justify">
-              Plongez dans l&apos;ambiance chaleureuse et élégante du Mess des Officiers.
+              Plongez dans l&apos;ambiance chaleureuse et élégante du Restaurant Central.
             </p>
           </div>
         </FadeIn>
@@ -386,7 +386,7 @@ function GallerySection() {
             },
             {
               src: 'https://nlpizsiqsanewubknrsu.supabase.co/storage/v1/object/public/images/images_public/407745033_05dbafde-b769-43ad-909e-a3ab5f6dd7ea-removebg-preview.png',
-              alt: "Table dressée élégante au Mess des Officiers",
+              alt: "Table dressée élégante au Restaurant Central",
             },
             {
               src: 'https://images.unsplash.com/photo-1559339352-11d035aa65de?q=80&w=800&auto=format&fit=crop',

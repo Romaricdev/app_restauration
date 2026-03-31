@@ -1,5 +1,11 @@
 import { supabase } from '@/lib/supabase'
 import type { TableReservation, HallReservation } from '@/types'
+import { assertPermission } from './permission-guard'
+
+const TABLE_RESERVATION_COLUMNS =
+  'id, customer_name, customer_phone, customer_email, date, time, party_size, table_number, notes, status, created_at'
+const HALL_RESERVATION_COLUMNS =
+  'id, customer_name, customer_phone, customer_email, organization, hall_id, start_date, end_date, event_type, expected_guests, notes, status, created_at, slot_type_slug, hall_pack_id'
 
 function formatTime(t: string): string {
   if (!t) return ''
@@ -15,7 +21,7 @@ function formatDate(d: string): string {
 export async function fetchTableReservations(): Promise<TableReservation[]> {
   const { data, error } = await supabase
     .from('table_reservations')
-    .select('*')
+    .select(TABLE_RESERVATION_COLUMNS)
     .order('date', { ascending: true })
     .order('time', { ascending: true })
 
@@ -46,7 +52,7 @@ export async function fetchTableReservationsByTable(
   const today = new Date().toISOString().slice(0, 10)
   const { data, error } = await supabase
     .from('table_reservations')
-    .select('*')
+    .select(TABLE_RESERVATION_COLUMNS)
     .eq('table_number', tableNumber)
     .gte('date', today)
     .neq('status', 'cancelled')
@@ -62,7 +68,7 @@ export async function fetchTableReservationsByStatus(
 ): Promise<TableReservation[]> {
   const { data, error } = await supabase
     .from('table_reservations')
-    .select('*')
+    .select(TABLE_RESERVATION_COLUMNS)
     .eq('status', status)
     .order('date', { ascending: true })
     .order('time', { ascending: true })
@@ -74,7 +80,7 @@ export async function fetchTableReservationsByStatus(
 export async function fetchHallReservations(): Promise<HallReservation[]> {
   const { data, error } = await supabase
     .from('hall_reservations')
-    .select('*')
+    .select(HALL_RESERVATION_COLUMNS)
     .order('start_date', { ascending: true })
 
   if (error) throw error
@@ -108,7 +114,7 @@ export async function fetchHallReservationsByHall(
 ): Promise<HallReservation[]> {
   const { data, error } = await supabase
     .from('hall_reservations')
-    .select('*')
+    .select(HALL_RESERVATION_COLUMNS)
     .eq('hall_id', hallId)
     .order('start_date', { ascending: true })
 
@@ -132,6 +138,7 @@ export type CreateTableReservationInput = {
 export async function createTableReservation(
   input: CreateTableReservationInput
 ): Promise<void> {
+  await assertPermission('reservations.create')
   const row = {
     customer_name: input.customerName.trim(),
     customer_phone: input.customerPhone.trim(),
@@ -153,6 +160,7 @@ export async function updateTableReservationStatus(
   id: string,
   status: ReservationStatus
 ): Promise<void> {
+  await assertPermission('reservations.update')
   const { error } = await (supabase.from('table_reservations') as any)
     .update({ status })
     .eq('id', id)
@@ -170,7 +178,7 @@ export async function fetchActiveTableReservationsToday(): Promise<TableReservat
   
   const { data, error } = await supabase
     .from('table_reservations')
-    .select('*')
+    .select(TABLE_RESERVATION_COLUMNS)
     .eq('status', 'confirmed')
     .in('date', [todayStr, tomorrowStr])
     .order('date', { ascending: true })
@@ -193,7 +201,9 @@ export async function updateTableStatusesFromReservations(): Promise<void> {
     const now = new Date()
     
     // Importer la fonction de mise à jour
-    const { updateTableStatusByNumber } = await import('./tables')
+    const { updateTableStatusByNumber, fetchTables } = await import('./tables')
+    const allTables = await fetchTables()
+    const tablesByNumber = new Map(allTables.map((t) => [t.number, t]))
     
     for (const reservation of reservations) {
       if (!reservation.tableNumber) continue
@@ -208,9 +218,7 @@ export async function updateTableStatusesFromReservations(): Promise<void> {
       if (minutesUntilReservation <= 15 && minutesUntilReservation >= 0) {
         // Marquer la table comme "reserved" seulement si elle n'est pas déjà occupée
         try {
-          const { fetchTables } = await import('./tables')
-          const allTables = await fetchTables()
-          const table = allTables.find((t) => t.number === reservation.tableNumber)
+          const table = tablesByNumber.get(reservation.tableNumber)
           if (table && table.status !== 'occupied' && !table.currentOrderId) {
             await updateTableStatusByNumber(reservation.tableNumber, 'reserved')
           }
@@ -222,9 +230,7 @@ export async function updateTableStatusesFromReservations(): Promise<void> {
       else if (minutesUntilReservation < -120) {
         // Vérifier si la table n'a pas de commande active
         try {
-          const { fetchTables } = await import('./tables')
-          const allTables = await fetchTables()
-          const table = allTables.find((t) => t.number === reservation.tableNumber)
+          const table = tablesByNumber.get(reservation.tableNumber)
           if (table && !table.currentOrderId && table.status === 'reserved') {
             await updateTableStatusByNumber(reservation.tableNumber, 'available')
           }
@@ -259,6 +265,7 @@ export type CreateHallReservationInput = {
 export async function createHallReservation(
   input: CreateHallReservationInput
 ): Promise<void> {
+  await assertPermission('reservation_halls.create')
   const row: Record<string, unknown> = {
     hall_id: input.hallId,
     customer_name: input.customerName.trim(),
@@ -285,6 +292,7 @@ export async function updateHallReservationStatus(
   id: string,
   status: ReservationStatus
 ): Promise<void> {
+  await assertPermission('reservation_halls.update')
   const { error } = await (supabase.from('hall_reservations') as any)
     .update({ status })
     .eq('id', id)

@@ -1,5 +1,5 @@
 -- ============================================
--- RLS — Mess des Officiers
+-- RLS — Restaurant Central
 -- Politiques anon SELECT pour lecture publique (app + dashboard sans auth).
 -- Exécuter après schema.sql et seed.sql.
 -- ============================================

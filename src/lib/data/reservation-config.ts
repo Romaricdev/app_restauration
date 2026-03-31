@@ -4,6 +4,7 @@ import type {
   HallPack,
   ReservationContact,
 } from '@/types'
+import { assertPermission } from './permission-guard'
 
 const RESERVATION_CONTACT_KEY = 'reservation_contact'
 
@@ -124,6 +125,7 @@ export async function fetchReservationContact(): Promise<ReservationContact> {
 export async function updateReservationContact(
   contact: ReservationContact
 ): Promise<ReservationContact> {
+  await assertPermission('reservation_halls.update')
   const value = {
     telephone_reservation: contact.telephoneReservation,
     telephone_paiement: contact.telephonePaiement,
@@ -154,6 +156,7 @@ export type UpdateSlotTypeInput = Partial<Omit<CreateSlotTypeInput, 'slug'>>
 export async function createSlotType(
   input: CreateSlotTypeInput
 ): Promise<ReservationSlotType> {
+  await assertPermission('reservation_halls.create')
   const row = {
     slug: input.slug.trim(),
     name: input.name.trim(),
@@ -172,6 +175,7 @@ export async function updateSlotType(
   id: number,
   input: UpdateSlotTypeInput
 ): Promise<ReservationSlotType> {
+  await assertPermission('reservation_halls.update')
   const payload: Record<string, unknown> = {}
   if (input.name != null) payload.name = input.name.trim()
   if (input.horaires != null) payload.horaires = input.horaires.trim()
@@ -192,6 +196,7 @@ export async function updateSlotType(
 }
 
 export async function deleteSlotType(id: number): Promise<void> {
+  await assertPermission('reservation_halls.delete')
   const { error } = await supabase
     .from('reservation_slot_types')
     .delete()
@@ -215,6 +220,7 @@ export type UpdateHallPackInput = Partial<Omit<CreateHallPackInput, 'hallId' | '
 export async function createHallPack(
   input: CreateHallPackInput
 ): Promise<HallPack> {
+  await assertPermission('reservation_halls.create')
   const row = {
     hall_id: input.hallId,
     slot_type_slug: input.slotTypeSlug,
@@ -237,6 +243,7 @@ export async function updateHallPack(
   id: number,
   input: UpdateHallPackInput
 ): Promise<HallPack> {
+  await assertPermission('reservation_halls.update')
   const payload: Record<string, unknown> = {}
   if (input.name !== undefined) payload.name = input.name?.trim() || null
   if (input.description !== undefined) payload.description = input.description?.trim() || null
@@ -260,6 +267,7 @@ export async function updateHallPack(
 }
 
 export async function deleteHallPack(id: number): Promise<void> {
+  await assertPermission('reservation_halls.delete')
   const { error } = await supabase.from('hall_packs').delete().eq('id', id)
   if (error) throw error
 }

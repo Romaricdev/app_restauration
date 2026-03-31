@@ -1,4 +1,4 @@
-# Analyse Complète du Projet - Mess des Officiers
+# Analyse Complète du Projet - Restaurant Central
 
 > **Date:** Février 2025
 > **Version analysée:** 1.0.0
@@ -25,7 +25,7 @@
 
 ### Score Global : 6.5/10
 
-Le projet "Mess des Officiers" est une application web complète de gestion de restaurant avec une **excellente fondation architecturale** mais nécessitant des améliorations significatives avant mise en production.
+Le projet "Restaurant Central" est une application web complète de gestion de restaurant avec une **excellente fondation architecturale** mais nécessitant des améliorations significatives avant mise en production.
 
 | Aspect | Score | Commentaire |
 |--------|-------|-------------|

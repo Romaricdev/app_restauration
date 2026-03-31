@@ -1,5 +1,5 @@
 /**
- * Types Supabase — Mess des Officiers
+ * Types Supabase — Restaurant Central
  *
  * Placeholder minimal pour createClient<Database>.
  * Pour des types complets générés depuis le schéma :

@@ -40,7 +40,7 @@ export function InvoicePreviewThermal({
     >
       {/* Header */}
       <div className="text-center border-b-2 border-gray-900 pb-2 mb-2">
-        <h1 className="text-base font-bold mb-0.5" style={{ fontSize: '14px' }}>MESS DES OFFICIERS</h1>
+        <h1 className="text-base font-bold mb-0.5" style={{ fontSize: '14px' }}>RESTAURANT CENTRAL</h1>
         <p className="text-xs" style={{ fontSize: '10px' }}>Point de Vente</p>
         <p className="text-xs mt-0.5" style={{ fontSize: '10px' }}>{formatDate(new Date().toISOString())}</p>
       </div>

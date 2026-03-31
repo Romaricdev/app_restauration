@@ -1,8 +1,8 @@
 {
   "meta": {
-    "name": "Mess des Officiers – Web Design System",
+    "name": "Restaurant Central – Web Design System",
     "version": "1.0.0",
-    "description": "Design system officiel du site web Mess des Officiers. Style institutionnel, élégant, UI-first, responsive.",
+    "description": "Design system officiel du site web Restaurant Central. Style institutionnel, élégant, UI-first, responsive.",
     "usage": "Next.js / Tailwind / Cursor"
   },
   "colors": {

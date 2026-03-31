@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation'
 import { 
   X, 
   Search, 
-  User, 
   ChefHat,
   ChevronRight,
   Phone,
@@ -85,7 +84,7 @@ export function MobileMenu({ isOpen, onClose, navItems, pagesDropdown }: MobileM
               <ChefHat className="w-6 h-6 text-white" />
             </div>
             <span className="font-semibold text-lg text-gray-900">
-              Mess des Officiers
+              Restaurant Central
             </span>
           </Link>
           <button
@@ -186,17 +185,6 @@ export function MobileMenu({ isOpen, onClose, navItems, pagesDropdown }: MobileM
           </div>
         </nav>
 
-        {/* Footer Actions */}
-        <div className="p-4 border-t border-gray-100 flex-shrink-0">
-          <Link
-            href="/login"
-            onClick={onClose}
-            className="flex items-center justify-center gap-2 w-full px-4 py-3.5 bg-[#F4A024] text-white font-medium rounded-xl hover:bg-[#C97F16] transition-colors min-h-[48px]"
-          >
-            <User className="w-5 h-5" />
-            Connexion / Inscription
-          </Link>
-        </div>
       </div>
     </div>
   )

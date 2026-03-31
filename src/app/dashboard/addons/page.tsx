@@ -11,6 +11,8 @@ import type { Addon, AddonCategoryOption } from '@/types'
 import type { ColumnDef } from '@tanstack/react-table'
 import { createAddon, updateAddon, deleteAddon } from '@/lib/data'
 import { useUIStore } from '@/store'
+import { getDashboardActionErrorMessage } from '@/lib/errors/permission'
+import { useAuth } from '@/hooks/useAuth'
 
 // ---------------------------------------------------------------------------
 // Addon card
@@ -23,9 +25,20 @@ interface AddonCardProps {
   onEdit: (addon: Addon) => void
   onToggle: (addon: Addon) => void
   onDelete: (addon: Addon) => void
+  canUpdate: boolean
+  canDelete: boolean
 }
 
-function AddonCard({ addon, categoryNames, includedFreeCount, onEdit, onToggle, onDelete }: AddonCardProps) {
+function AddonCard({
+  addon,
+  categoryNames,
+  includedFreeCount,
+  onEdit,
+  onToggle,
+  onDelete,
+  canUpdate,
+  canDelete,
+}: AddonCardProps) {
   return (
     <Card variant="dashboard" padding="md" interactive>
       <CardContent className="p-0">
@@ -64,13 +77,19 @@ function AddonCard({ addon, categoryNames, includedFreeCount, onEdit, onToggle, 
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon-sm" onClick={() => onToggle(addon)} title={addon.available ? 'Désactiver' : 'Activer'}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => onToggle(addon)}
+              title={addon.available ? 'Désactiver' : 'Activer'}
+              disabled={!canUpdate}
+            >
               {addon.available ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
             </Button>
-            <Button variant="ghost" size="icon-sm" onClick={() => onEdit(addon)} title="Modifier">
+            <Button variant="ghost" size="icon-sm" onClick={() => onEdit(addon)} title="Modifier" disabled={!canUpdate}>
               <Edit className="w-4 h-4" />
             </Button>
-            <Button variant="ghost" size="icon-sm" onClick={() => onDelete(addon)} title="Supprimer">
+            <Button variant="ghost" size="icon-sm" onClick={() => onDelete(addon)} title="Supprimer" disabled={!canDelete}>
               <Trash2 className="w-4 h-4 text-red-500" />
             </Button>
           </div>
@@ -89,6 +108,10 @@ export default function AddonsPage() {
   const { data: addonCategoryOptions, loading: optionsLoading, refetch: refetchOptions } = useAddonCategoryOptions()
   const { data: categories, loading: categoriesLoading } = useCategories()
   const addToast = useUIStore((s) => s.addToast)
+  const { hasPermission } = useAuth()
+  const canCreate = hasPermission('addons.create')
+  const canUpdate = hasPermission('addons.update')
+  const canDelete = hasPermission('addons.delete')
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all')
   const [formOpen, setFormOpen] = useState(false)
@@ -128,17 +151,38 @@ export default function AddonsPage() {
         : inactiveAddons
 
   const handleAdd = () => {
+    if (!canCreate) {
+      addToast({
+        type: 'error',
+        message: "Vous ne pouvez pas effectuer cette action car vous n'avez pas les permissions requises.",
+      })
+      return
+    }
     setEditingAddon(null)
     setFormOpen(true)
   }
 
   const handleEdit = (addon: Addon) => {
+    if (!canUpdate) {
+      addToast({
+        type: 'error',
+        message: "Vous ne pouvez pas effectuer cette action car vous n'avez pas les permissions requises.",
+      })
+      return
+    }
     setEditingAddon(addon)
     setFormOpen(true)
   }
 
   const handleToggle = useCallback(
     async (addon: Addon) => {
+      if (!canUpdate) {
+        addToast({
+          type: 'error',
+          message: "Vous ne pouvez pas effectuer cette action car vous n'avez pas les permissions requises.",
+        })
+        return
+      }
       try {
         await updateAddon(addon.id, { available: !addon.available })
         await refetchAll()
@@ -149,15 +193,22 @@ export default function AddonsPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors du changement.',
+          message: getDashboardActionErrorMessage(e, 'Erreur lors du changement.'),
         })
       }
     },
-    [refetchAll, addToast]
+    [canUpdate, refetchAll, addToast]
   )
 
   const handleDelete = useCallback(
     async (addon: Addon) => {
+      if (!canDelete) {
+        addToast({
+          type: 'error',
+          message: "Vous ne pouvez pas effectuer cette action car vous n'avez pas les permissions requises.",
+        })
+        return
+      }
       if (!confirm(`Supprimer l'addon « ${addon.name} » ?`)) return
       try {
         await deleteAddon(addon.id)
@@ -166,15 +217,29 @@ export default function AddonsPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de la suppression.',
+          message: getDashboardActionErrorMessage(e, 'Erreur lors de la suppression.'),
         })
       }
     },
-    [refetchAll, addToast]
+    [canDelete, refetchAll, addToast]
   )
 
   const handleFormSubmit = useCallback(
     async (data: AddonFormData, categoryOptions: AddonCategoryOptionForm[]) => {
+      if (editingAddon && !canUpdate) {
+        addToast({
+          type: 'error',
+          message: "Vous ne pouvez pas effectuer cette action car vous n'avez pas les permissions requises.",
+        })
+        return
+      }
+      if (!editingAddon && !canCreate) {
+        addToast({
+          type: 'error',
+          message: "Vous ne pouvez pas effectuer cette action car vous n'avez pas les permissions requises.",
+        })
+        return
+      }
       try {
         const opts = categoryOptions.map((o) => ({
           categoryId: o.categoryId,
@@ -194,11 +259,11 @@ export default function AddonsPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de l\'enregistrement.',
+          message: getDashboardActionErrorMessage(e, "Erreur lors de l'enregistrement."),
         })
       }
     },
-    [editingAddon, refetchAll, addToast]
+    [editingAddon, canCreate, canUpdate, refetchAll, addToast]
   )
 
   const includedFreeCount = addonCategoryOptions.filter((o) => o.includedFree).length
@@ -255,13 +320,19 @@ export default function AddonsPage() {
           const addon = row.original
           return (
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon-sm" onClick={() => handleToggle(addon)} title={addon.available ? 'Désactiver' : 'Activer'}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => handleToggle(addon)}
+                title={addon.available ? 'Désactiver' : 'Activer'}
+                disabled={!canUpdate}
+              >
                 {addon.available ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
               </Button>
-              <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(addon)} title="Modifier">
+              <Button variant="ghost" size="icon-sm" onClick={() => handleEdit(addon)} title="Modifier" disabled={!canUpdate}>
                 <Edit className="w-4 h-4" />
               </Button>
-              <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(addon)} title="Supprimer">
+              <Button variant="ghost" size="icon-sm" onClick={() => handleDelete(addon)} title="Supprimer" disabled={!canDelete}>
                 <Trash2 className="w-4 h-4 text-red-500" />
               </Button>
             </div>
@@ -269,7 +340,7 @@ export default function AddonsPage() {
         },
       },
     ],
-    [getCategoryNamesForAddon, handleToggle, handleEdit, handleDelete]
+    [getCategoryNamesForAddon, canUpdate, canDelete, handleToggle, handleEdit, handleDelete]
   )
 
   return (
@@ -281,7 +352,7 @@ export default function AddonsPage() {
             Gérer les suppléments, options incluses et prix par catégorie
           </p>
         </div>
-        <Button variant="primary" onClick={handleAdd} className="gap-2">
+        <Button variant="primary" onClick={handleAdd} className="gap-2" disabled={!canCreate}>
           <Plus className="w-4 h-4" />
           Ajouter un addon
         </Button>
@@ -373,9 +444,11 @@ export default function AddonsPage() {
               addon={addon}
               categoryNames={getCategoryNamesForAddon(addon)}
               includedFreeCount={getIncludedFreeCount(addon.id)}
-              onEdit={handleEdit}
-              onToggle={handleToggle}
-              onDelete={handleDelete}
+              onEdit={canUpdate ? handleEdit : () => {}}
+              onToggle={canUpdate ? handleToggle : () => {}}
+              onDelete={canDelete ? handleDelete : () => {}}
+              canUpdate={canUpdate}
+              canDelete={canDelete}
             />
           ))}
         </div>
@@ -390,7 +463,7 @@ export default function AddonsPage() {
               icon={Layers}
               title="Aucun addon"
               description="Aucun addon avec ce filtre"
-              action={{ label: 'Ajouter un addon', onClick: handleAdd }}
+              action={{ label: 'Ajouter un addon', onClick: handleAdd, disabled: !canCreate }}
             />
           </CardContent>
         </Card>

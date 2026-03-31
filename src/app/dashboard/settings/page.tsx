@@ -15,6 +15,7 @@ import {
   Construction
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase/client'
+import { getDashboardActionErrorMessage } from '@/lib/errors/permission'
 
 interface AppSettings {
   restaurant_name: string
@@ -31,7 +32,7 @@ interface AppSettings {
 }
 
 const defaultSettings: AppSettings = {
-  restaurant_name: 'Mess des Officiers',
+  restaurant_name: 'Restaurant Central',
   restaurant_address: 'Quartier Général, Yaoundé',
   restaurant_phone: '+237 6XX XXX XXX',
   restaurant_email: 'contact@messofficiers.cm',
@@ -124,7 +125,7 @@ export default function SettingsPage() {
       console.error('Error loading settings:', error)
       addToast({
         type: 'error',
-        message: 'Erreur lors du chargement des paramètres',
+        message: getDashboardActionErrorMessage(error, 'Erreur lors du chargement des paramètres'),
       })
     } finally {
       setLoading(false)
@@ -177,7 +178,7 @@ export default function SettingsPage() {
       console.error('Error saving settings:', error)
       addToast({
         type: 'error',
-        message: error instanceof Error ? error.message : 'Erreur lors de l\'enregistrement',
+        message: getDashboardActionErrorMessage(error, "Erreur lors de l'enregistrement"),
       })
     } finally {
       setSaving(false)
@@ -285,7 +286,7 @@ export default function SettingsPage() {
               <Input
                 value={settings.restaurant_name}
                 onChange={(e) => handleChange('restaurant_name', e.target.value)}
-                placeholder="Mess des Officiers"
+                placeholder="Restaurant Central"
               />
             </div>
             <div>

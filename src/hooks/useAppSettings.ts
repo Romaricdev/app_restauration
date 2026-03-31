@@ -17,7 +17,7 @@ interface AppSettings {
 }
 
 const defaultSettings: AppSettings = {
-  restaurant_name: 'Mess des Officiers',
+  restaurant_name: 'Restaurant Central',
   restaurant_address: 'Quartier Général, Yaoundé',
   restaurant_phone: '+237 6XX XXX XXX',
   restaurant_email: 'contact@messofficiers.cm',

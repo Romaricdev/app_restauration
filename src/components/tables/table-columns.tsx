@@ -15,12 +15,16 @@ interface TableColumnsProps {
   onEdit: (table: RestaurantTable) => void
   onDelete: (table: RestaurantTable) => void
   onGenerateQR: (table: RestaurantTable) => void
+  canUpdate: boolean
+  canDelete: boolean
 }
 
 export function getTableColumns({
   onEdit,
   onDelete,
   onGenerateQR,
+  canUpdate,
+  canDelete,
 }: TableColumnsProps): ColumnDef<RestaurantTable>[] {
   return [
     {
@@ -82,6 +86,7 @@ export function getTableColumns({
               size="icon-sm"
               onClick={() => onEdit(table)}
               title="Modifier"
+              disabled={!canUpdate}
             >
               <Edit className="h-4 w-4" />
             </Button>
@@ -90,6 +95,7 @@ export function getTableColumns({
               size="icon-sm"
               onClick={() => onDelete(table)}
               title="Supprimer"
+              disabled={!canDelete}
             >
               <Trash2 className="h-4 w-4 text-red-500" />
             </Button>

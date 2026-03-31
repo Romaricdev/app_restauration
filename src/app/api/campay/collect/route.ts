@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
       amount: Math.round(amount),
       currency: 'XAF',
       from: from.startsWith('+') ? from : `+237${from.replace(/^0/, '')}`,
-      description: (description ?? 'Commande Mess des Officiers').toString().slice(0, 255),
+      description: (description ?? 'Commande Restaurant Central').toString().slice(0, 255),
       external_reference: (external_reference ?? crypto.randomUUID()).toString(),
     })
     return NextResponse.json(result)

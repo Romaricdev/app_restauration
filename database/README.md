@@ -1,4 +1,4 @@
-# Base de données — Mess des Officiers
+# Base de données — Restaurant Central
 
 Ce dossier contient la **conception** et le **schéma SQL** de la base de données du projet, alignés sur les types, mocks et interfaces frontend existants.
 

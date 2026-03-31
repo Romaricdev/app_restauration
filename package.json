@@ -1,7 +1,7 @@
 {
   "name": "mess-des-officiers",
   "version": "1.0.0",
-  "description": "Système de gestion de restaurant - Mess des Officiers",
+  "description": "Système de gestion de restaurant - Restaurant Central",
   "private": true,
   "scripts": {
     "dev": "next dev",

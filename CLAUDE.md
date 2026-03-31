@@ -1,6 +1,6 @@
 # CLAUDE.md - Base de Connaissances du Projet
 
-> **Projet:** Mess des Officiers - Système de Gestion de Restaurant
+> **Projet:** Restaurant Central - Système de Gestion de Restaurant
 > **Version:** 1.0.0
 > **Dernière mise à jour:** Janvier 2026
 
@@ -10,7 +10,7 @@
 
 ### Description
 
-Application web complète de gestion de restaurant pour le **Mess des Officiers**. Le système comprend :
+Application web complète de gestion de restaurant pour le **Restaurant Central**. Le système comprend :
 
 - Un **site public** pour les clients (menu, panier, réservations)
 - Un **dashboard administratif** pour la gestion (commandes, produits, tables, etc.)
@@ -560,9 +560,9 @@ xl: 1280px
 
 ```typescript
 // Informations Restaurant
-APP_NAME = 'Mess des Officiers'
+APP_NAME = 'Restaurant Central'
 RESTAURANT_INFO = {
-  name: 'Mess des Officiers',
+  name: 'Restaurant Central',
   address: 'Quartier Général, Yaoundé',
   phone: '+237 6XX XXX XXX',
   email: 'contact@messofficiers.cm',

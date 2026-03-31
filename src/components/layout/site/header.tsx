@@ -28,7 +28,7 @@ export function SiteHeader() {
             <ChefHat className="w-6 h-6 text-white" />
           </div>
           <span className="font-poppins font-semibold text-lg text-site-text-primary">
-            Mess des Officiers
+            Restaurant Central
           </span>
         </Link>
 

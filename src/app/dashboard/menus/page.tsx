@@ -12,6 +12,8 @@ import { formatDate } from '@/lib/utils'
 import type { Menu, MenuType } from '@/types'
 import { createMenu, updateMenu, duplicateMenu, deleteMenu } from '@/lib/data'
 import { useUIStore } from '@/store'
+import { getDashboardActionErrorMessage } from '@/lib/errors/permission'
+import { useAuth } from '@/hooks/useAuth'
 
 // ============================================
 // MENU CARD COMPONENT
@@ -22,9 +24,11 @@ interface MenuCardProps {
   onViewDetail?: (menu: Menu) => void
   onEdit?: (menu: Menu) => void
   onDuplicate?: (menu: Menu) => void
+  canUpdate: boolean
+  canCreate: boolean
 }
 
-function MenuCard({ menu, onViewDetail, onEdit, onDuplicate }: MenuCardProps) {
+function MenuCard({ menu, onViewDetail, onEdit, onDuplicate, canUpdate, canCreate }: MenuCardProps) {
   return (
     <Card variant="dashboard" padding="md" interactive onClick={() => onViewDetail?.(menu)}>
       <CardContent className="p-0">
@@ -74,6 +78,7 @@ function MenuCard({ menu, onViewDetail, onEdit, onDuplicate }: MenuCardProps) {
             }}
             className="gap-2"
             title="Modifier"
+            disabled={!canUpdate}
           >
             <Edit className="w-4 h-4" />
           </Button>
@@ -86,6 +91,7 @@ function MenuCard({ menu, onViewDetail, onEdit, onDuplicate }: MenuCardProps) {
             }}
             className="gap-2"
             title="Dupliquer"
+            disabled={!canCreate}
           >
             <Copy className="w-4 h-4" />
           </Button>
@@ -103,6 +109,10 @@ export default function MenusPage() {
   const { data: menus, loading: menusLoading, refetch: refetchMenus } = useMenus()
   const { data: menuItems } = useMenuItems()
   const addToast = useUIStore((s) => s.addToast)
+  const { hasPermission } = useAuth()
+  const canCreate = hasPermission('menus.create')
+  const canUpdate = hasPermission('menus.update')
+  const canDelete = hasPermission('menus.delete')
   const [viewMode, setViewMode] = useState<ViewMode>('card')
   const [typeFilter, setTypeFilter] = useState<string>('all')
   const [statusFilter, setStatusFilter] = useState<string>('all')
@@ -163,7 +173,7 @@ export default function MenusPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de la duplication.',
+          message: getDashboardActionErrorMessage(e, 'Erreur lors de la duplication.'),
         })
       }
     },
@@ -180,7 +190,7 @@ export default function MenusPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de la suppression.',
+          message: getDashboardActionErrorMessage(e, 'Erreur lors de la suppression.'),
         })
       }
     },
@@ -199,7 +209,7 @@ export default function MenusPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors du changement.',
+          message: getDashboardActionErrorMessage(e, 'Erreur lors du changement.'),
         })
       }
     },
@@ -243,7 +253,7 @@ export default function MenusPage() {
       } catch (e) {
         addToast({
           type: 'error',
-          message: e instanceof Error ? e.message : 'Erreur lors de l\'enregistrement.',
+          message: getDashboardActionErrorMessage(e, "Erreur lors de l'enregistrement."),
         })
       }
     },
@@ -257,8 +267,11 @@ export default function MenusPage() {
         onDuplicate: handleDuplicate,
         onDelete: handleDelete,
         onToggleActive: handleToggleActive,
+        canCreate,
+        canUpdate,
+        canDelete,
       }),
-    [handleDuplicate, handleDelete, handleToggleActive]
+    [handleDuplicate, handleDelete, handleToggleActive, canCreate, canUpdate, canDelete]
   )
 
   return (
@@ -273,7 +286,7 @@ export default function MenusPage() {
             Gérez vos menus du jour et menus prédéfinis
           </p>
         </div>
-        <Button variant="primary" onClick={handleAdd} className="gap-2">
+        <Button variant="primary" onClick={handleAdd} className="gap-2" disabled={!canCreate}>
           <Plus className="w-4 h-4" />
           Créer un menu
         </Button>
@@ -377,6 +390,8 @@ export default function MenusPage() {
               onViewDetail={handleViewDetail}
               onEdit={handleEdit}
               onDuplicate={handleDuplicate}
+              canUpdate={canUpdate}
+              canCreate={canCreate}
             />
           ))}
         </div>
@@ -393,7 +408,8 @@ export default function MenusPage() {
               description="Aucun menu trouvé avec ces filtres"
               action={{
                 label: 'Créer un menu',
-                onClick: handleAdd
+                onClick: handleAdd,
+                disabled: !canCreate,
               }}
             />
           </CardContent>

@@ -1,5 +1,5 @@
 -- ============================================
--- Mess des Officiers — Schéma PostgreSQL
+-- Restaurant Central — Schéma PostgreSQL
 -- Compatible Supabase / PostgreSQL 15+
 -- ============================================
 
