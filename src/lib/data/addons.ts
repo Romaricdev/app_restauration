@@ -7,14 +7,7 @@ import {
   mergeOptionsIntoCache,
 } from '@/lib/cache/addons-cache'
 import type { Addon, AddonCategoryOption, AddonWithCategoryOption } from '@/types'
-
-async function assertPermission(permissionCode: string, fallbackMessage: string): Promise<void> {
-  const { data, error } = await (supabase.rpc('has_permission', {
-    p_permission_code: permissionCode,
-  }) as any)
-  if (error) throw error
-  if (!data) throw new Error(fallbackMessage)
-}
+import { assertPermission } from './permission-guard'
 
 interface DbAddon {
   id: string
