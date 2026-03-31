@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Session invalide.' }, { status: 401 })
     }
 
-    const { data: canCreate, error: permissionError } = await (userClient.rpc('has_permission', {
+    const { data: canCreate, error: permissionError } = await ((userClient as any).rpc('has_permission', {
       p_permission_code: 'admins.create',
     }) as any)
     if (permissionError) {

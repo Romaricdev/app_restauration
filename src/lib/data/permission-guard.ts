@@ -4,7 +4,7 @@ const DEFAULT_PERMISSION_ERROR =
   "Vous ne pouvez pas effectuer cette action car vous n'avez pas les permissions requises."
 
 export async function assertPermission(permissionCode: string, message?: string): Promise<void> {
-  const { data, error } = await (supabase.rpc('has_permission', {
+  const { data, error } = await ((supabase as any).rpc('has_permission', {
     p_permission_code: permissionCode,
   }) as any)
   if (error) throw error
