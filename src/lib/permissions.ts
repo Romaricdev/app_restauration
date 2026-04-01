@@ -98,3 +98,11 @@ export function getFirstAccessibleDashboardPath(user: User | null | undefined): 
   return first?.path ?? null
 }
 
+/** Cible après connexion : dashboard (première page autorisée) ou site public pour un client. */
+export function getPostLoginPath(user: User): string {
+  if (user.role === 'admin' || user.dashboardRole) {
+    return getFirstAccessibleDashboardPath(user) ?? '/dashboard'
+  }
+  return '/home'
+}
+

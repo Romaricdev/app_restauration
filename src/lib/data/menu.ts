@@ -18,7 +18,7 @@ interface DbMenuItem {
 }
 
 const MENU_ITEM_COLUMNS =
-  'id, category_id, name, description, price, image, available, popular, preparation_time, allergens, created_at, updated_at'
+  'id, category_id, name, description, price, image, available, popular, preparation_time, created_at, updated_at'
 
 function mapMenuItem(row: DbMenuItem): MenuItem {
   return {

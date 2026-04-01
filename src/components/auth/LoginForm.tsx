@@ -12,6 +12,7 @@ import { ReCaptcha } from './ReCaptcha'
 import { useAuth } from '@/hooks/useAuth'
 import { useAuthStore } from '@/store/auth-store'
 import { useEffect } from 'react'
+import { getPostLoginPath } from '@/lib/permissions'
 
 interface LoginFormData {
   email: string
@@ -53,11 +54,7 @@ export function LoginForm({ onSwitchToRegister }: LoginFormProps) {
           return
         }
 
-        if (finalUser.role === 'admin' || finalUser.dashboardRole) {
-          router.push('/dashboard')
-        } else {
-          router.push('/home')
-        }
+        router.push(getPostLoginPath(finalUser))
       }, 1000) // Délai plus long pour s'assurer que tout est synchronisé
 
       return () => clearTimeout(redirectTimer)
